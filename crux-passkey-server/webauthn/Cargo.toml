@@ -1,0 +1,19 @@
+[package]
+name = "webauthn"
+authors = ["Stuart Harris <stuart.harris@red-badger.com>"]
+description = "webauthn endpoints"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "1"
+bytes = "1"
+http = "0.2"
+serde = { version = "1.0.189", features = ["derive"] }
+serde_json = "1.0.105"
+spin-sdk = { git = "https://github.com/fermyon/spin", tag = "v1.5.1" }
+
+[workspace]

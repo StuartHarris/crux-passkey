@@ -1,0 +1,20 @@
+spin_manifest_version = "1"
+authors = ["Stuart Harris <stuart.harris@red-badger.com>"]
+description = "Website for registration and authn with passkeys"
+name = "crux-passkey-server"
+trigger = { type = "http", base = "/" }
+version = "0.1.0"
+
+[[component]]
+id = "webauthn"
+source = "webauthn/target/wasm32-wasi/release/webauthn.wasm"
+allowed_http_hosts = []
+sqlite_databases = ["default"]
+
+[component.trigger]
+route = "/auth/..."
+
+[component.build]
+command = "cargo build --target wasm32-wasi --release"
+workdir = "webauthn"
+watch = ["src/**/*.rs", "Cargo.toml"]

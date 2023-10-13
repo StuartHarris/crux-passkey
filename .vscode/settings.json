@@ -1,0 +1,3 @@
+{
+  "rust-analyzer.linkedProjects": ["./crux-passkey-server/webauthn/Cargo.toml"]
+}
