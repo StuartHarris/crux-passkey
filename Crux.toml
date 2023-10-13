@@ -1,0 +1,14 @@
+name = "Crux Passkey"
+description = "An iOS app to test passkey integration with Crux"
+authors = ["Red Badger Consulting Limited"]
+repository = "https://github.com/stuartharris/crux-passkey"
+
+[cores.shared]
+source = "shared"
+type_gen = "shared_types"
+crux_version = "0.6.3"
+
+[shells.iOS]
+template = "iOS"
+source = "iOS"
+cores = ["shared"]
