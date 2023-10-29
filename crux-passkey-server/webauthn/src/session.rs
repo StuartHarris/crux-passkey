@@ -41,7 +41,7 @@ impl Session {
         }
     }
 
-    pub fn _cookie(&self, name: &str, path: &str) -> String {
+    pub fn cookie(&self, name: &str, path: &str) -> String {
         cookie::Cookie::build((name, self.id.to_string()))
             .path(path)
             .secure(true)

@@ -49,15 +49,11 @@ fn register_start(_req: Request, params: Params) -> Result<Response> {
         &execute_params,
     )?;
     let mut rows = row_set.rows();
-    let user_unique_id = if let Some(row) = rows.next() {
-        if let Some(bytes) = row.get::<&[u8]>("user_id") {
-            Uuid::from_slice(bytes)?
-        } else {
-            Uuid::new_v4()
-        }
-    } else {
-        Uuid::new_v4()
-    };
+    let user_unique_id = rows
+        .next()
+        .and_then(|row| row.get::<&[u8]>("user_id"))
+        .and_then(|bytes| Some(Uuid::from_slice(bytes).expect("valid UUID")))
+        .unwrap_or_else(Uuid::new_v4);
 
     let Some(username) = params.get("username") else {
         return bad_request("no username");
@@ -70,13 +66,11 @@ fn register_start(_req: Request, params: Params) -> Result<Response> {
     let exclude_credentials: Vec<CredentialID> = row_set
         .rows()
         .filter_map(|row| {
-            let Some(bytes) = row.get::<&[u8]>("credentials") else {
-                return None;
-            };
-            let Ok(passkey) = serde_json::from_slice::<Passkey>(bytes) else {
-                return None;
-            };
-            Some(passkey.cred_id().clone())
+            row.get::<&[u8]>("credentials")
+                .and_then(|bytes| {
+                    Some(serde_json::from_slice::<Passkey>(bytes).expect("valid passkey"))
+                })
+                .map(|passkey| passkey.cred_id().clone())
         })
         .collect();
 
@@ -100,15 +94,18 @@ fn register_start(_req: Request, params: Params) -> Result<Response> {
             session.data = serde_json::to_vec(&reg_state)?;
             SqliteSessionStore::set(&session)?;
             println!("Registration Successful!");
-            let body = Some(
-                serde_json::to_string(&ccr)
-                    .expect("serialize passkey")
-                    .into(),
-            );
             Ok(http::Response::builder()
                 .header("Content-Type", "application/json")
+                .header(
+                    "set-cookie",
+                    session.cookie("crux-passkey.register", "/auth"),
+                )
                 .status(200)
-                .body(body)?)
+                .body(Some(
+                    serde_json::to_string(&ccr)
+                        .expect("serialize passkey")
+                        .into(),
+                ))?)
         }
         Err(e) => {
             println!("challenge_register -> {:?}", e);
