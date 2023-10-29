@@ -6,14 +6,21 @@ use session::{Session, SessionId, SessionStore, SqliteSessionStore};
 use spin_sdk::{
     http::{Params, Request, Response, Router},
     http_component,
+    sqlite::{Connection, ValueParam},
+};
+use url::Url;
+use uuid::Uuid;
+use webauthn_rs::{
+    prelude::{CredentialID, Passkey},
+    WebauthnBuilder,
 };
 
 #[http_component]
 fn handle_request(req: Request) -> Result<Response> {
     let mut router = Router::new();
     router.get("/auth/register_start/:username", register_start);
-    router.get("/auth/register_finish", register_finish);
-    router.post("/auth/login_start/:username", login_start);
+    router.post("/auth/register_finish", register_finish);
+    router.get("/auth/login_start/:username", login_start);
     router.post("/auth/login_finish", login_finish);
     router.any("/*", |_, _| {
         Ok(http::Response::builder()
@@ -25,25 +32,89 @@ fn handle_request(req: Request) -> Result<Response> {
 
 // Helper for returning the query results as JSON
 #[derive(Serialize, Deserialize, Debug)]
-struct ToDo {
-    id: u32,
-    description: String,
-    due: String,
+struct User {
+    id: u128,
+    name: String,
 }
 
-fn register_start(_req: Request, _params: Params) -> Result<Response> {
-    let mut session = Session::new();
-    session.data = serde_json::to_vec(&ToDo {
-        id: 1,
-        description: "Do the thing".to_string(),
-        due: "2021-01-01".to_string(),
-    })?;
-    SqliteSessionStore::set(&session)?;
+fn register_start(_req: Request, params: Params) -> Result<Response> {
+    // find user's id from their username
+    let connection = Connection::open_default()?;
+    let Some(username) = params.get("username") else {
+        return bad_request("no username");
+    };
+    let execute_params = [ValueParam::Text(username)];
+    let row_set = connection.execute(
+        "SELECT user_id FROM user WHERE user_name = ?1",
+        &execute_params,
+    )?;
+    let mut rows = row_set.rows();
+    let user_unique_id = if let Some(row) = rows.next() {
+        if let Some(bytes) = row.get::<&[u8]>("user_id") {
+            Uuid::from_slice(bytes)?
+        } else {
+            Uuid::new_v4()
+        }
+    } else {
+        Uuid::new_v4()
+    };
 
-    Ok(http::Response::builder()
-        .header("set-cookie", session.cookie("session_id", "/auth"))
-        .status(200)
-        .body(Some("yay!".into()))?)
+    let Some(username) = params.get("username") else {
+        return bad_request("no username");
+    };
+    let execute_params = [ValueParam::Blob(user_unique_id.as_bytes())];
+    let row_set = connection.execute(
+        "SELECT credentials FROM credentials WHERE user_id = ?1",
+        &execute_params,
+    )?;
+    let exclude_credentials: Vec<CredentialID> = row_set
+        .rows()
+        .filter_map(|row| {
+            let Some(bytes) = row.get::<&[u8]>("credentials") else {
+                return None;
+            };
+            let Ok(passkey) = serde_json::from_slice::<Passkey>(bytes) else {
+                return None;
+            };
+            Some(passkey.cred_id().clone())
+        })
+        .collect();
+
+    // Effective domain name.
+    let rp_id = "localhost";
+    let rp_origin = Url::parse("https://localhost:3000").expect("Invalid URL");
+    let builder = WebauthnBuilder::new(rp_id, &rp_origin).expect("Invalid configuration");
+
+    let builder = builder.rp_name("Spin Webauthn-rs");
+
+    let webauthn = builder.build().expect("Invalid configuration");
+
+    match webauthn.start_passkey_registration(
+        user_unique_id,
+        &username,
+        &username,
+        Some(exclude_credentials),
+    ) {
+        Ok((ccr, reg_state)) => {
+            let mut session = Session::new();
+            session.data = serde_json::to_vec(&reg_state)?;
+            SqliteSessionStore::set(&session)?;
+            println!("Registration Successful!");
+            let body = Some(
+                serde_json::to_string(&ccr)
+                    .expect("serialize passkey")
+                    .into(),
+            );
+            Ok(http::Response::builder()
+                .header("Content-Type", "application/json")
+                .status(200)
+                .body(body)?)
+        }
+        Err(e) => {
+            println!("challenge_register -> {:?}", e);
+            return Err(e.into());
+        }
+    }
 }
 
 fn register_finish(req: Request, _params: Params) -> Result<Response> {
@@ -59,10 +130,9 @@ fn register_finish(req: Request, _params: Params) -> Result<Response> {
             .body(Some("no session".into()))?);
     };
 
-    let todo: ToDo = serde_json::from_slice(&session.data)?;
     Ok(http::Response::builder()
         .status(200)
-        .body(Some(format!("{:?}", todo).into()))?)
+        .body(Some(format!("{:?}", session).into()))?)
 }
 
 fn login_start(_req: Request, _params: Params) -> Result<Response> {
@@ -71,4 +141,10 @@ fn login_start(_req: Request, _params: Params) -> Result<Response> {
 
 fn login_finish(_req: Request, _params: Params) -> Result<Response> {
     todo!();
+}
+
+fn bad_request(reason: &str) -> Result<Response> {
+    Ok(http::Response::builder()
+        .status(400)
+        .body(Some(reason.to_string().into()))?)
 }

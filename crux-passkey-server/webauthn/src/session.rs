@@ -41,7 +41,7 @@ impl Session {
         }
     }
 
-    pub fn cookie(&self, name: &str, path: &str) -> String {
+    pub fn _cookie(&self, name: &str, path: &str) -> String {
         cookie::Cookie::build((name, self.id.to_string()))
             .path(path)
             .secure(true)
@@ -68,18 +68,16 @@ impl SessionStore for SqliteSessionStore {
             execute_params.as_slice(),
         )?;
         let mut rows = row_set.rows();
-        if let Some(row) = rows.next() {
-            if let Some(data) = row.get::<&[u8]>("data") {
-                Ok(Some(Session {
-                    id: id.clone(),
-                    data: data.to_vec(),
-                }))
-            } else {
-                Ok(None)
-            }
-        } else {
-            Ok(None)
-        }
+        let Some(row) = rows.next() else {
+            return Ok(None);
+        };
+        let Some(data) = row.get::<&[u8]>("data") else {
+            return Ok(None);
+        };
+        Ok(Some(Session {
+            id: id.clone(),
+            data: data.to_vec(),
+        }))
     }
 
     fn set(session: &Session) -> Result<()> {
