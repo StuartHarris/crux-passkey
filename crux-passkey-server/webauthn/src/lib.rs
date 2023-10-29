@@ -1,6 +1,6 @@
 mod session;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use session::{Session, SessionId, SessionStore, SqliteSessionStore};
 use spin_sdk::{
@@ -11,7 +11,9 @@ use spin_sdk::{
 use url::Url;
 use uuid::Uuid;
 use webauthn_rs::{
-    prelude::{CredentialID, Passkey},
+    prelude::{
+        Base64UrlSafeData, CredentialID, Passkey, PasskeyRegistration, RegisterPublicKeyCredential,
+    },
     WebauthnBuilder,
 };
 
@@ -38,52 +40,15 @@ struct User {
 }
 
 fn register_start(_req: Request, params: Params) -> Result<Response> {
-    // find user's id from their username
+    let Some(username) = params.get("username") else {
+        return bad_request("no username");
+    };
+
     let connection = Connection::open_default()?;
-    let Some(username) = params.get("username") else {
-        return bad_request("no username");
-    };
-    let execute_params = [ValueParam::Text(username)];
-    let row_set = connection.execute(
-        "SELECT user_id FROM user WHERE user_name = ?1",
-        &execute_params,
-    )?;
-    let mut rows = row_set.rows();
-    let user_unique_id = rows
-        .next()
-        .and_then(|row| row.get::<&[u8]>("user_id"))
-        .and_then(|bytes| Some(Uuid::from_slice(bytes).expect("valid UUID")))
-        .unwrap_or_else(Uuid::new_v4);
+    let user_unique_id = user_unique_id(&connection, username)?;
+    let exclude_credentials: Vec<CredentialID> = exclude_credentials(&connection, user_unique_id)?;
 
-    let Some(username) = params.get("username") else {
-        return bad_request("no username");
-    };
-    let execute_params = [ValueParam::Blob(user_unique_id.as_bytes())];
-    let row_set = connection.execute(
-        "SELECT credentials FROM credentials WHERE user_id = ?1",
-        &execute_params,
-    )?;
-    let exclude_credentials: Vec<CredentialID> = row_set
-        .rows()
-        .filter_map(|row| {
-            row.get::<&[u8]>("credentials")
-                .and_then(|bytes| {
-                    Some(serde_json::from_slice::<Passkey>(bytes).expect("valid passkey"))
-                })
-                .map(|passkey| passkey.cred_id().clone())
-        })
-        .collect();
-
-    // Effective domain name.
-    let rp_id = "localhost";
-    let rp_origin = Url::parse("https://localhost:3000").expect("Invalid URL");
-    let builder = WebauthnBuilder::new(rp_id, &rp_origin).expect("Invalid configuration");
-
-    let builder = builder.rp_name("Spin Webauthn-rs");
-
-    let webauthn = builder.build().expect("Invalid configuration");
-
-    match webauthn.start_passkey_registration(
+    match webauthn().start_passkey_registration(
         user_unique_id,
         &username,
         &username,
@@ -91,7 +56,7 @@ fn register_start(_req: Request, params: Params) -> Result<Response> {
     ) {
         Ok((ccr, reg_state)) => {
             let mut session = Session::new();
-            session.data = serde_json::to_vec(&reg_state)?;
+            session.data = serde_json::to_vec(&(username, user_unique_id, reg_state))?;
             SqliteSessionStore::set(&session)?;
             println!("Registration Successful!");
             Ok(http::Response::builder()
@@ -114,6 +79,17 @@ fn register_start(_req: Request, params: Params) -> Result<Response> {
     }
 }
 
+fn webauthn() -> webauthn_rs::Webauthn {
+    let rp_id = "localhost";
+    let rp_origin = Url::parse(&format!("https://{rp_id}:3000")).expect("valid URL");
+    let webauthn = WebauthnBuilder::new(rp_id, &rp_origin)
+        .expect("Invalid configuration")
+        .rp_name("Spin Webauthn-rs")
+        .build()
+        .expect("Invalid configuration");
+    webauthn
+}
+
 fn register_finish(req: Request, _params: Params) -> Result<Response> {
     let Some(session_id) = SessionId::from_request(&req)? else {
         return Ok(http::Response::builder()
@@ -125,6 +101,38 @@ fn register_finish(req: Request, _params: Params) -> Result<Response> {
         return Ok(http::Response::builder()
             .status(400)
             .body(Some("no session".into()))?);
+    };
+    SqliteSessionStore::remove(&session_id)?;
+
+    let req = req.body().as_deref().ok_or_else(|| anyhow!("no body"))?;
+    let reg = serde_json::from_slice::<RegisterPublicKeyCredential>(req)?;
+
+    let (username, user_unique_id, reg_state): (String, Uuid, PasskeyRegistration) =
+        serde_json::from_slice(session.data.as_slice())?;
+
+    match webauthn().finish_passkey_registration(&reg, &reg_state) {
+        Ok(passkey) => {
+            let connection = Connection::open_default()?;
+            connection.execute(
+                "INSERT INTO user (user_name, user_id) VALUES (?1, ?2)",
+                &[
+                    ValueParam::Text(&username),
+                    ValueParam::Blob(user_unique_id.as_bytes()),
+                ],
+            )?;
+            connection.execute(
+                "INSERT INTO credentials (user_id, credentials) VALUES (?1, ?2)",
+                &[
+                    ValueParam::Blob(user_unique_id.as_bytes()),
+                    ValueParam::Blob(&serde_json::to_vec(&passkey)?),
+                ],
+            )?;
+            println!("Registration Successful!");
+        }
+        Err(e) => {
+            println!("challenge_register -> {:?}", e);
+            return Err(e.into());
+        }
     };
 
     Ok(http::Response::builder()
@@ -144,4 +152,37 @@ fn bad_request(reason: &str) -> Result<Response> {
     Ok(http::Response::builder()
         .status(400)
         .body(Some(reason.to_string().into()))?)
+}
+
+fn exclude_credentials(
+    connection: &Connection,
+    user_unique_id: Uuid,
+) -> Result<Vec<Base64UrlSafeData>> {
+    Ok(connection
+        .execute(
+            "SELECT credentials FROM credentials WHERE user_id = ?1",
+            &[ValueParam::Blob(user_unique_id.as_bytes())],
+        )?
+        .rows()
+        .filter_map(|row| {
+            row.get::<&[u8]>("credentials")
+                .and_then(|bytes| {
+                    Some(serde_json::from_slice::<Passkey>(bytes).expect("valid passkey"))
+                })
+                .map(|passkey| passkey.cred_id().clone())
+        })
+        .collect())
+}
+
+fn user_unique_id(connection: &Connection, username: &str) -> Result<Uuid> {
+    Ok(connection
+        .execute(
+            "SELECT user_id FROM user WHERE user_name = ?1",
+            &[ValueParam::Text(username)],
+        )?
+        .rows()
+        .next()
+        .and_then(|row| row.get::<&[u8]>("user_id"))
+        .and_then(|bytes| Some(Uuid::from_slice(bytes).expect("valid UUID")))
+        .unwrap_or_else(Uuid::new_v4))
 }
