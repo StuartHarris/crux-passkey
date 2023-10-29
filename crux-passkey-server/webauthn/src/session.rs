@@ -1,15 +1,17 @@
-use std::{fmt::Display, str::FromStr};
-
 use anyhow::Result;
 use cookie::SameSite;
-use spin_sdk::sqlite::{Connection, ValueParam};
+use spin_sdk::{
+    http,
+    sqlite::{Connection, ValueParam},
+};
+use std::{fmt::Display, str::FromStr};
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub struct SessionId(pub Uuid);
 
 impl SessionId {
-    pub fn from_request(req: &spin_sdk::http::Request) -> Result<Option<Self>> {
+    fn from_request(req: &http::Request) -> Result<Option<Self>> {
         if let Some(cookie) = req.headers().get("cookie") {
             let cookie = cookie::Cookie::parse(std::str::from_utf8(cookie.as_bytes())?)?;
             let value = cookie.name_value().1;
@@ -39,6 +41,18 @@ impl Session {
             id: SessionId(Uuid::new_v4()),
             data: vec![],
         }
+    }
+
+    pub fn retrieve(req: &http::Request) -> Result<Option<Self>> {
+        let Some(session_id) = SessionId::from_request(&req)? else {
+            return Ok(None);
+        };
+
+        let Some(session) = SqliteSessionStore::get(&session_id)? else {
+            return Ok(None);
+        };
+        SqliteSessionStore::remove(&session_id)?;
+        Ok(Some(session))
     }
 
     pub fn cookie(&self, name: &str, path: &str) -> String {
