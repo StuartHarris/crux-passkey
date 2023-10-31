@@ -1,0 +1,17 @@
+[package]
+name = "web-leptos"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+console_error_panic_hook = "0.1.7"
+console_log = "1.0.0"
+leptos = { version = "0.5.1", features = ["csr"] }
+log = "0.4.20"
+shared = { path = "../shared" }

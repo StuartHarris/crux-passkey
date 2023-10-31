@@ -16,6 +16,7 @@ crux_core = "0.6"
 crux_macros = "0.3"
 serde = { workspace = true, features = ["derive"] }
 lazy_static = "1.4.0"
+log = "0.4.20"
 uniffi = "0.24.3"
 wasm-bindgen = "0.2.87"
 
@@ -24,3 +25,7 @@ uniffi = { version = "0.24.3", features = ["cli"] }
 
 [build-dependencies]
 uniffi = { version = "0.24.3", features = ["build"] }
+
+[dev-dependencies]
+assert_let_bind = "0.1.1"
+insta = { version = "1.34.0", features = ["yaml"] }
