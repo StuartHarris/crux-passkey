@@ -12,6 +12,18 @@ rust-version.workspace = true
 anyhow.workspace = true
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
+gloo-net = { version = "0.4.0", features = ["http"] }
 leptos = { version = "0.5.1", features = ["csr"] }
 log = "0.4.20"
 shared = { path = "../shared" }
+webauthn-rs-proto = { version = "0.4.9", features = ["wasm"] }
+web-sys = { version = "0.3.63", features = [
+  "CredentialCreationOptions",
+  "CredentialRequestOptions",
+  "CredentialsContainer",
+  "Navigator",
+  "PublicKeyCredential",
+  "PublicKeyCredentialCreationOptions",
+] }
+wasm-bindgen-futures = { version = "0.4" }
+serde_json = "^1.0.79"

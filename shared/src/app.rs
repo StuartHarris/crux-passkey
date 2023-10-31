@@ -67,10 +67,12 @@ impl crux_core::App for App {
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match (model.state.clone(), event.clone()) {
+            (_, Event::None) => {}
             (State::Steady, Event::Register(user_name)) => {
                 if user_name.is_empty() {
                     model.status = Status::Error("user name cannot be empty".to_string());
                 } else {
+                    info!("registering user: {}", user_name);
                     model.user_name = user_name.clone();
                     model.state = State::Registering;
                     model.status = Status::Info("registering...".to_string());
@@ -85,6 +87,7 @@ impl crux_core::App for App {
                 if user_name.is_empty() {
                     model.status = Status::Error("user name cannot be empty".to_string());
                 } else {
+                    info!("logging in user: {}", user_name);
                     model.user_name = user_name.clone();
                     model.state = State::LoggingIn;
                     model.status = Status::Info("logging in...".to_string());
@@ -99,7 +102,9 @@ impl crux_core::App for App {
                 model.state = State::Steady;
                 model.status = Status::Error(e);
             }
-            (_, _) => {}
+            (s, m) => {
+                info!("Invalid State Transition -> {s:?}, {m:?}");
+            }
         };
 
         info!("update: {:?} {:?}", event, model);

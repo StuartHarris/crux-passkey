@@ -7,19 +7,29 @@ use spin_sdk::{
 use std::{fmt::Display, str::FromStr};
 use uuid::Uuid;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionId(pub Uuid);
 
 impl SessionId {
-    fn from_request(req: &http::Request) -> Result<Option<Self>> {
-        if let Some(cookie) = req.headers().get("cookie") {
-            let cookie = cookie::Cookie::parse(std::str::from_utf8(cookie.as_bytes())?)?;
-            let value = cookie.name_value().1;
-            let session_id = SessionId(Uuid::from_str(value)?);
-            Ok(Some(session_id))
-        } else {
-            Ok(None)
+    fn from_request(req: &http::Request, cookie_name: &str) -> Result<Option<Self>> {
+        let Some(cookie) = req.headers().get("cookie") else {
+            return Ok(None);
+        };
+
+        let cookie = cookie.to_str()?;
+        for cookie in cookie.split("; ") {
+            let mut cookie = cookie.split("=");
+            let Some(name) = cookie.next() else {
+                continue;
+            };
+            let Some(value) = cookie.next() else {
+                continue;
+            };
+            if name == cookie_name {
+                return Ok(Some(SessionId(Uuid::from_str(value)?)));
+            }
         }
+        Ok(None)
     }
 }
 
@@ -43,8 +53,8 @@ impl Session {
         }
     }
 
-    pub fn retrieve(req: &http::Request) -> Result<Option<Self>> {
-        let Some(session_id) = SessionId::from_request(&req)? else {
+    pub fn retrieve(req: &http::Request, cookie_name: &str) -> Result<Option<Self>> {
+        let Some(session_id) = SessionId::from_request(&req, cookie_name)? else {
             return Ok(None);
         };
 
@@ -115,5 +125,35 @@ impl SessionStore for SqliteSessionStore {
             execute_params.as_slice(),
         )?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_get_cookie_from_headers() {
+        use super::*;
+
+        let mut req = http::Request::new(None);
+        let headers = req.headers_mut();
+        headers.append(
+            "cookie",
+            "crux-passkey.register=8a164194-c931-4127-a8c7-9a9d3ad60d7e; crux-passkey.login=21203bd1-1753-464f-9a3a-14e62d0ef0fa"
+                .parse()
+                .unwrap(),
+        );
+        assert_eq!(
+            SessionId::from_request(&req, "crux-passkey.login").unwrap(),
+            Some(SessionId(
+                Uuid::parse_str("21203bd1-1753-464f-9a3a-14e62d0ef0fa").unwrap()
+            ))
+        );
+        assert_eq!(
+            SessionId::from_request(&req, "crux-passkey.register").unwrap(),
+            Some(SessionId(
+                Uuid::parse_str("8a164194-c931-4127-a8c7-9a9d3ad60d7e").unwrap()
+            ))
+        );
+        assert_eq!(SessionId::from_request(&req, "blah").unwrap(), None);
     }
 }

@@ -18,10 +18,12 @@ use webauthn_rs::{
     },
     WebauthnBuilder,
 };
+const LOGIN_COOKIE: &str = "crux-passkey.login";
+const REGISTER_COOKIE: &str = "crux-passkey.register";
 
 fn webauthn() -> webauthn_rs::Webauthn {
     let rp_id = "localhost";
-    let rp_origin = Url::parse(&format!("https://{rp_id}:3000")).expect("valid URL");
+    let rp_origin = Url::parse(&format!("http://{rp_id}:3005")).expect("valid URL");
     let webauthn = WebauthnBuilder::new(rp_id, &rp_origin)
         .expect("Invalid configuration")
         .rp_name("Spin Webauthn-rs")
@@ -52,10 +54,7 @@ pub(crate) fn register_start(_req: Request, params: Params) -> Result<Response> 
             SqliteSessionStore::set(&session)?;
             Ok(http::Response::builder()
                 .header("Content-Type", "application/json")
-                .header(
-                    "set-cookie",
-                    session.cookie("crux-passkey.register", "/auth"),
-                )
+                .header("set-cookie", session.cookie(REGISTER_COOKIE, "/auth"))
                 .status(200)
                 .body(Some(serde_json::to_string(&ccr)?.into()))?)
         }
@@ -67,7 +66,7 @@ pub(crate) fn register_start(_req: Request, params: Params) -> Result<Response> 
 }
 
 pub(crate) fn register_finish(req: Request, _params: Params) -> Result<Response> {
-    let Some(session) = Session::retrieve(&req)? else {
+    let Some(session) = Session::retrieve(&req, REGISTER_COOKIE)? else {
         return bad_request("no session");
     };
 
@@ -114,7 +113,7 @@ pub(crate) fn login_start(_req: Request, params: Params) -> Result<Response> {
             SqliteSessionStore::set(&session)?;
             Ok(http::Response::builder()
                 .header("Content-Type", "application/json")
-                .header("set-cookie", session.cookie("crux-passkey.login", "/auth"))
+                .header("set-cookie", session.cookie(LOGIN_COOKIE, "/auth"))
                 .status(200)
                 .body(Some(serde_json::to_string(&rcr)?.into()))?)
         }
@@ -126,7 +125,7 @@ pub(crate) fn login_start(_req: Request, params: Params) -> Result<Response> {
 }
 
 pub(crate) fn login_finish(req: Request, _params: Params) -> Result<Response> {
-    let Some(session) = Session::retrieve(&req)? else {
+    let Some(session) = Session::retrieve(&req, LOGIN_COOKIE)? else {
         return bad_request("no session");
     };
 
