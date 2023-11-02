@@ -11,7 +11,7 @@ targets:
   CruxPasskey:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "17.0"
     sources:
       - CruxPasskey
       - path: ../shared/src/shared.udl

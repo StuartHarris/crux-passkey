@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		035E90582347E5896ECFE1BC /* SharedTypes in Frameworks */ = {isa = PBXBuildFile; productRef = 2574AC9FBE46D50DBFBFE0E1 /* SharedTypes */; };
 		19EB5AA98E070C5683772E80 /* uniffi-bindgen in Resources */ = {isa = PBXBuildFile; fileRef = C372727A3C6E31A192329228 /* uniffi-bindgen */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		835C8A91125FDB13D7D7773E /* passkey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 466320EDA655F5A2650B075A /* passkey.swift */; };
 		8584282A3314421D65445E17 /* core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ECE52A2658347959A74FE7B /* core.swift */; };
 		8F07F9D0CAB6B1EA68EE2E14 /* shared.udl in Sources */ = {isa = PBXBuildFile; fileRef = 6674F4161FFB48409729F5D6 /* shared.udl */; };
 		A307864345730D1262CE18AC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C68179492055D96C9B8A9A2A /* ContentView.swift */; };
@@ -57,7 +58,7 @@
 			remoteGlobalIDString = CA6077E9462329DCCAE9E9A3;
 			remoteInfo = "shared-staticlib";
 		};
-		CCBF4D082AD99DF8009A54AE /* PBXContainerItemProxy */ = {
+		CC6C82522AF3BE08008AC036 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 9797B29EB4E4F9AFF0EC6E29 /* Shared */;
 			proxyType = 2;
@@ -77,6 +78,7 @@
 		0ECE52A2658347959A74FE7B /* core.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = core.swift; sourceTree = "<group>"; };
 		18DB3432AB7AF438D9C2C810 /* SharedTypes */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SharedTypes; path = ../shared_types/generated/swift/SharedTypes; sourceTree = SOURCE_ROOT; };
 		2E11F683B3D5B8E0A4566306 /* CruxPasskeyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CruxPasskeyApp.swift; sourceTree = "<group>"; };
+		466320EDA655F5A2650B075A /* passkey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = passkey.swift; sourceTree = "<group>"; };
 		4CC58B44130E05D7102C0E6F /* CruxPasskey.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CruxPasskey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5507F68490A8079E3906948D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6674F4161FFB48409729F5D6 /* shared.udl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shared.udl; sourceTree = "<group>"; };
@@ -101,7 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				164633B29E3A02F4AC7DF571 /* libshared_static.a */,
-				CCBF4D092AD99DF8009A54AE /* shared.dylib */,
+				CC6C82532AF3BE08008AC036 /* shared.dylib */,
 				C372727A3C6E31A192329228 /* uniffi-bindgen */,
 			);
 			name = Products;
@@ -150,6 +152,7 @@
 				0ECE52A2658347959A74FE7B /* core.swift */,
 				2E11F683B3D5B8E0A4566306 /* CruxPasskeyApp.swift */,
 				5507F68490A8079E3906948D /* Info.plist */,
+				466320EDA655F5A2650B075A /* passkey.swift */,
 			);
 			path = CruxPasskey;
 			sourceTree = "<group>";
@@ -235,11 +238,11 @@
 			remoteRef = 025BA13DF667266AB04A1020 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		CCBF4D092AD99DF8009A54AE /* shared.dylib */ = {
+		CC6C82532AF3BE08008AC036 /* shared.dylib */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.dylib";
 			path = shared.dylib;
-			remoteRef = CCBF4D082AD99DF8009A54AE /* PBXContainerItemProxy */;
+			remoteRef = CC6C82522AF3BE08008AC036 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -263,6 +266,7 @@
 				A307864345730D1262CE18AC /* ContentView.swift in Sources */,
 				CBF26363420FB2F47B4159A2 /* CruxPasskeyApp.swift in Sources */,
 				8584282A3314421D65445E17 /* core.swift in Sources */,
+				835C8A91125FDB13D7D7773E /* passkey.swift in Sources */,
 				8F07F9D0CAB6B1EA68EE2E14 /* shared.udl in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -290,7 +294,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = CruxPasskey/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -313,7 +317,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = CruxPasskey/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

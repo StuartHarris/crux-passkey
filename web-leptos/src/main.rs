@@ -2,8 +2,8 @@ mod core;
 mod passkey;
 
 use leptos::{
-    component, create_effect, create_node_ref, create_signal, ev::SubmitEvent, html::Input, view,
-    IntoView, NodeRef, SignalGet, SignalUpdate,
+    component, create_effect, create_node_ref, create_signal, ev::SubmitEvent, event_target_value,
+    html::Input, view, IntoView, NodeRef, SignalGet, SignalUpdate,
 };
 use shared::Event;
 
@@ -53,6 +53,9 @@ fn RootComponent() -> impl IntoView {
                 <form on:submit=on_submit>
                     <input class="input is-primary" type="text" placeholder="user name"
                         node_ref=input_element
+                        on:input=move |ev| {
+                            set_event.update(|value| *value = Event::Validate(event_target_value(&ev)));
+                        }
                     />
                     <div class="m-2">{notification}</div>
                     <div class="buttons section is-centered">

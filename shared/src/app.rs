@@ -9,6 +9,7 @@ pub enum Event {
     None,
 
     //driving...
+    Validate(String),
     Register(String),
     Login(String),
 
@@ -68,35 +69,46 @@ impl crux_core::App for App {
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match (model.state.clone(), event.clone()) {
             (_, Event::None) => {}
-            (State::Steady, Event::Register(user_name)) => {
+            (State::Steady, Event::Validate(user_name)) => {
                 if user_name.is_empty() {
                     model.status = Status::Error("user name cannot be empty".to_string());
                 } else {
+                    model.status = Status::None;
+                }
+            }
+            (State::Steady, Event::Register(user_name)) => {
+                self.update(Event::Validate(user_name.clone()), model, caps);
+                if model.status == Status::None {
                     info!("registering user: {}", user_name);
                     model.user_name = user_name.clone();
                     model.state = State::Registering;
-                    model.status = Status::Info("registering...".to_string());
+                    model.status = Status::Info(format!(r#"registering "{user_name}"..."#));
                     caps.passkey.register(user_name, Event::Registered);
                 }
             }
             (State::Registering, Event::Registered) => {
                 model.state = State::Steady;
-                model.status = Status::Info("registered".to_string());
+                model.status = Status::Info(format!(
+                    r#"registered "{user_name}""#,
+                    user_name = model.user_name
+                ));
             }
             (State::Steady, Event::Login(user_name)) => {
-                if user_name.is_empty() {
-                    model.status = Status::Error("user name cannot be empty".to_string());
-                } else {
+                self.update(Event::Validate(user_name.clone()), model, caps);
+                if model.status == Status::None {
                     info!("logging in user: {}", user_name);
                     model.user_name = user_name.clone();
                     model.state = State::LoggingIn;
-                    model.status = Status::Info("logging in...".to_string());
+                    model.status = Status::Info(format!(r#"logging in "{user_name}"..."#));
                     caps.passkey.login(user_name, Event::LoggedIn);
                 }
             }
             (State::LoggingIn, Event::LoggedIn) => {
                 model.state = State::Steady;
-                model.status = Status::Info("logged in".to_string());
+                model.status = Status::Info(format!(
+                    r#"logged in "{user_name}""#,
+                    user_name = model.user_name
+                ));
             }
             (_, Event::Error(e)) => {
                 model.state = State::Steady;
@@ -126,6 +138,41 @@ mod tests {
     use crux_core::{assert_effect, testing::AppTester};
 
     #[test]
+    fn validation_success() {
+        let app = AppTester::<App, _>::default();
+
+        let mut model = Model::default();
+
+        let event = Event::Validate("stu".to_string());
+
+        let update = app.update(event, &mut model);
+        assert_effect!(update, Effect::Render(_));
+
+        insta::assert_yaml_snapshot!(app.view(&mut model), @r###"
+        ---
+        status: None
+        "###);
+    }
+
+    #[test]
+    fn validation_failure() {
+        let app = AppTester::<App, _>::default();
+
+        let mut model = Model::default();
+
+        let event = Event::Validate("".to_string());
+
+        let update = app.update(event, &mut model);
+        assert_effect!(update, Effect::Render(_));
+
+        insta::assert_yaml_snapshot!(app.view(&mut model), @r###"
+        ---
+        status:
+          Error: user name cannot be empty
+        "###);
+    }
+
+    #[test]
     fn registration() {
         let app = AppTester::<App, _>::default();
 
@@ -139,10 +186,10 @@ mod tests {
         insta::assert_yaml_snapshot!(app.view(&mut model), @r###"
         ---
         status:
-          Info: registering...
+          Info: "registering \"stu\"..."
         "###);
 
-        assert_let!(Effect::Passkey(request), &mut update.effects[0]);
+        assert_let!(Effect::Passkey(request), &mut update.effects[1]);
 
         let actual = &request.operation;
         let expected = &PasskeyOperation::Register("stu".to_string());
@@ -163,7 +210,7 @@ mod tests {
         insta::assert_yaml_snapshot!(app.view(&mut model), @r###"
         ---
         status:
-          Info: registered
+          Info: "registered \"stu\""
         "###);
     }
 
@@ -199,10 +246,10 @@ mod tests {
         insta::assert_yaml_snapshot!(app.view(&mut model), @r###"
         ---
         status:
-          Info: logging in...
+          Info: "logging in \"stu\"..."
         "###);
 
-        assert_let!(Effect::Passkey(request), &mut update.effects[0]);
+        assert_let!(Effect::Passkey(request), &mut update.effects[1]);
 
         let actual = &request.operation;
         let expected = &PasskeyOperation::Login("stu".to_string());
@@ -223,7 +270,7 @@ mod tests {
         insta::assert_yaml_snapshot!(app.view(&mut model), @r###"
         ---
         status:
-          Info: logged in
+          Info: "logged in \"stu\""
         "###);
     }
 
