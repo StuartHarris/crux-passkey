@@ -121,7 +121,12 @@ impl SessionStore for SqliteSessionStore {
         let connection = Connection::open_default()?;
         let execute_params = [ValueParam::Blob(id.0.as_bytes())];
         connection.execute(
-            "DELETE FROM user_session WHERE id = ?1",
+            // removes the session, and any other sessions older than 10 seconds
+            r#"
+            DELETE FROM user_session
+                WHERE id = ?1
+                OR created_at <= datetime('now', '-10 seconds');
+            "#,
             execute_params.as_slice(),
         )?;
         Ok(())

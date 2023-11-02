@@ -20,5 +20,7 @@ CREATE TABLE IF NOT EXISTS user_session (
   -- Uuid
   id BLOB PRIMARY KEY,
   -- serialized Session
-  data BLOB NOT NULL
+  data BLOB NOT NULL,
+  -- db timestamp
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
