@@ -1,5 +1,5 @@
 use anyhow::Result;
-use spin_sdk::sqlite::{self, Connection, ValueParam};
+use spin_sdk::sqlite::{self, Connection, Value};
 use uuid::Uuid;
 use webauthn_rs::prelude::{Base64UrlSafeData, Passkey};
 
@@ -20,7 +20,7 @@ pub(crate) fn get_user_credentials(
     Ok(connection
         .execute(
             "SELECT credentials FROM credentials WHERE user_id = ?1",
-            &[ValueParam::Blob(user_unique_id.as_bytes())],
+            &[Value::Blob(user_unique_id.as_bytes().to_vec())],
         )?
         .rows()
         .filter_map(|row| {
@@ -35,7 +35,7 @@ pub(crate) fn get_user_unique_id(connection: &Connection, username: &str) -> Res
     Ok(connection
         .execute(
             "SELECT user_id FROM user WHERE user_name = ?1",
-            &[ValueParam::Text(username)],
+            &[Value::Text(username.to_string())],
         )?
         .rows()
         .next()
@@ -52,8 +52,8 @@ pub(crate) fn save_credentials(
     Ok(connection.execute(
         "INSERT INTO credentials (user_id, credentials) VALUES (?1, ?2)",
         &[
-            ValueParam::Blob(user_unique_id.as_bytes()),
-            ValueParam::Blob(&serde_json::to_vec(&passkey)?),
+            Value::Blob(user_unique_id.as_bytes().to_vec()),
+            Value::Blob(serde_json::to_vec(&passkey)?),
         ],
     )?)
 }
@@ -66,8 +66,8 @@ pub(crate) fn save_user(
     Ok(connection.execute(
         "INSERT INTO user (user_name, user_id) VALUES (?1, ?2)",
         &[
-            ValueParam::Text(&username),
-            ValueParam::Blob(user_unique_id.as_bytes()),
+            Value::Text(username.to_string()),
+            Value::Blob(user_unique_id.as_bytes().to_vec()),
         ],
     )?)
 }

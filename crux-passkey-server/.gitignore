@@ -2,3 +2,4 @@ main.wasm
 .spin/
 .env
 *.pem
+/static

@@ -2,7 +2,7 @@ use anyhow::Result;
 use cookie::SameSite;
 use spin_sdk::{
     http,
-    sqlite::{Connection, ValueParam},
+    sqlite::{Connection, Value},
 };
 use std::{fmt::Display, str::FromStr};
 use uuid::Uuid;
@@ -12,11 +12,14 @@ pub struct SessionId(pub Uuid);
 
 impl SessionId {
     fn from_request(req: &http::Request, cookie_name: &str) -> Result<Option<Self>> {
-        let Some(cookie) = req.headers().get("cookie") else {
+        let Some(cookie) = req.header("cookie") else {
             return Ok(None);
         };
 
-        let cookie = cookie.to_str()?;
+        let Some(cookie) = cookie.as_str() else {
+            return Ok(None);
+        };
+
         for cookie in cookie.split("; ") {
             let mut cookie = cookie.split("=");
             let Some(name) = cookie.next() else {
@@ -86,7 +89,7 @@ pub struct SqliteSessionStore {}
 impl SessionStore for SqliteSessionStore {
     fn get(id: &SessionId) -> Result<Option<Session>> {
         let connection = Connection::open_default()?;
-        let execute_params = [ValueParam::Blob(id.0.as_bytes())];
+        let execute_params = [Value::Blob(id.0.as_bytes().to_vec())];
         let row_set = connection.execute(
             "SELECT data FROM user_session WHERE id = ?1",
             execute_params.as_slice(),
@@ -107,8 +110,8 @@ impl SessionStore for SqliteSessionStore {
     fn set(session: &Session) -> Result<()> {
         let connection = Connection::open_default()?;
         let execute_params = [
-            ValueParam::Blob(session.id.0.as_bytes()),
-            ValueParam::Blob(session.data.as_slice()),
+            Value::Blob(session.id.0.as_bytes().to_vec()),
+            Value::Blob(session.data.clone()),
         ];
         connection.execute(
             "INSERT OR REPLACE INTO user_session (id, data) VALUES (?1, ?2)",
@@ -119,7 +122,7 @@ impl SessionStore for SqliteSessionStore {
 
     fn remove(id: &SessionId) -> Result<()> {
         let connection = Connection::open_default()?;
-        let execute_params = [ValueParam::Blob(id.0.as_bytes())];
+        let execute_params = [Value::Blob(id.0.as_bytes().to_vec())];
         connection.execute(
             // removes the session, and any other sessions older than 10 seconds
             r#"
@@ -139,14 +142,12 @@ mod tests {
     fn test_get_cookie_from_headers() {
         use super::*;
 
-        let mut req = http::Request::new(None);
-        let headers = req.headers_mut();
-        headers.append(
+        let req = http::Request::builder().header(
             "cookie",
             "crux-passkey.register=8a164194-c931-4127-a8c7-9a9d3ad60d7e; crux-passkey.login=21203bd1-1753-464f-9a3a-14e62d0ef0fa"
-                .parse()
+                .parse::<String>()
                 .unwrap(),
-        );
+        ).build();
         assert_eq!(
             SessionId::from_request(&req, "crux-passkey.login").unwrap(),
             Some(SessionId(

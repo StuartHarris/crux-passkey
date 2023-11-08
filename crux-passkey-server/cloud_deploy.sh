@@ -7,6 +7,4 @@ export OPENSSL_STATIC=1
 export OPENSSL_DIR
 OPENSSL_DIR=$(pwd)/webauthn/openssl_wasm/precompiled/
 
-spin cloud sqlite execute @migration.sql --label default --app crux-passkey-server
-
-spin cloud deploy --build
+spin cloud deploy --build --variable rp_id="$SPIN_VARIABLE_DOMAIN_REMOTE"

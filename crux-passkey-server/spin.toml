@@ -1,33 +1,55 @@
-spin_manifest_version = "1"
+spin_manifest_version = 2
+
+[application]
+name = "crux-passkey-server"
+version = "0.1.0"
 authors = ["Stuart Harris <stuart.harris@red-badger.com>"]
 description = "Website for registration and authn with passkeys"
-name = "crux-passkey-server"
-trigger = { type = "http", base = "/" }
-version = "0.1.0"
 
-[[component]]
-id = "webauthn"
+[variables]
+rp_id = { required = true }
+
+[[trigger.http]]
+route = "/auth/..."
+component = "webauthn"
+
+[[trigger.http]]
+route = "/.well-known/..."
+component = "well-known"
+
+[[trigger.http]]
+route = "/..."
+component = "static"
+
+[component.webauthn]
 source = "webauthn/target/wasm32-wasi/release/webauthn.wasm"
 allowed_http_hosts = []
 sqlite_databases = ["default"]
 
-[component.trigger]
-route = "/auth/..."
+[component.webauthn.variables]
+rp_id = "{{ rp_id }}"
 
-[component.build]
+[component.webauthn.build]
 command = "cargo build --target wasm32-wasi --release"
 workdir = "webauthn"
 watch = ["src/**/*.rs", "Cargo.toml"]
 
-[[component]]
-id = "well-known"
+[component.well-known]
 source = "well-known/target/wasm32-wasi/release/well_known.wasm"
 allowed_http_hosts = []
 
-[component.trigger]
-route = "/.well-known/..."
-
-[component.build]
+[component.well-known.build]
 command = "cargo build --target wasm32-wasi --release"
 workdir = "well-known"
 watch = ["src/**/*.rs", "Cargo.toml"]
+
+[component.static]
+source = { url = "https://github.com/fermyon/spin-fileserver/releases/download/v0.0.3/spin_static_fs.wasm", digest = "sha256:38bf971900228222f7f6b2ccee5051f399adca58d71692cdfdea98997965fd0d" }
+files = [{ source = "static", destination = "/" }]
+
+[component.static.build]
+command = """
+  (cd ../web-leptos/ && trunk build --release) && \
+  rm -rf static && mkdir static && \
+  cp ../web-leptos/dist/* ./static/
+  """

@@ -9,11 +9,10 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-anyhow = "1"
+anyhow = "1.0.75"
 cookie = { version = "0.18.0", features = ["percent-encode", "secure"] }
-http = "0.2"
 serde_json = "1.0.108"
-spin-sdk = { git = "https://github.com/fermyon/spin", tag = "v1.5.1" }
+spin-sdk = { git = "https://github.com/fermyon/spin" }
 url = "2.4.1"
 uuid = { version = "1.5.0", features = ["v4"] }
 webauthn-rs = { version = "0.4.8", features = [
