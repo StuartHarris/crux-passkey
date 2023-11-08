@@ -1,6 +1,7 @@
 {
   "rust-analyzer.linkedProjects": [
     "./Cargo.toml",
-    "./crux-passkey-server/webauthn/Cargo.toml"
+    "./crux-passkey-server/webauthn/Cargo.toml",
+    "./crux-passkey-server/well-known/Cargo.toml"
   ]
 }

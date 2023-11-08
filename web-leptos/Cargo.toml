@@ -26,4 +26,3 @@ web-sys = { version = "0.3.64", features = [
   "PublicKeyCredentialCreationOptions",
 ] }
 wasm-bindgen-futures = { version = "0.4" }
-serde_json = "^1.0.108"

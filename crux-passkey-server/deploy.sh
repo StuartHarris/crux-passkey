@@ -3,7 +3,10 @@
 # shellcheck source=.env
 source .env
 
-spin cloud deploy --variable api_key="$SPIN_CONFIG_API_KEY"
+export OPENSSL_STATIC=1
+export OPENSSL_DIR
+OPENSSL_DIR=$(pwd)/webauthn/openssl_wasm/precompiled/
 
-# note you'll need to substutite "generous-lion" with the name of your database instance
-spin cloud sqlite execute generous-lion "$(cat migration.sql)"
+spin cloud sqlite execute @migration.sql --label default --app crux-passkey-server
+
+spin cloud deploy --build

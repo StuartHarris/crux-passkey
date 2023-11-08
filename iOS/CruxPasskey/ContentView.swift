@@ -1,33 +1,37 @@
 import SharedTypes
 import SwiftUI
+import AuthenticationServices
 
 struct ContentView: View {
     @ObservedObject var core: Core
+//    @EnvironmentObject private var accountStore: AccountStore
     @State private var username: String = ""
     @FocusState private var usernameFieldIsFocused: Bool
-
+    
     var body: some View {
-        VStack {
-            Section(header: Text("User name")) {
+        Section {
+            LabeledContent("User name") {
                 TextField(
                     "User name",
                     text: $username,
                     prompt: Text("Required")
                 )
-                .onChange(of: username) { core.update(.validate(username))}
+                .textContentType(.username)
+                .keyboardType(.emailAddress)
+                .onChange(of: username) { core.update(.validate(username)) }
                 .focused($usernameFieldIsFocused)
                 .textInputAutocapitalization(.never)
                 .disableAutocorrection(true)
                 .textFieldStyle(.roundedBorder)
-                .padding(10)
+                .padding(5)
                 .shadow(color: .gray, radius: 2)
-            }
+            }.padding(10)
             HStack {
-                ActionButton(label: "Register", color: .yellow) {
-                    core.update(.register(username))
-                }
-                ActionButton(label: "Login", color: .green) {
+                ActionButton(label: "Sign in", color: .green) {
                     core.update(.login(username))
+                }
+                ActionButton(label: "Sign up", color: .yellow) {
+                    core.update(.register(username))
                 }
             }
             switch core.view.status {
@@ -35,7 +39,21 @@ struct ContentView: View {
             case let .error(msg): Text(msg)
             case let .info(msg): Text(msg)
             }
+        } header: {
+            Image(systemName: "person.badge.key.fill")
+                .font(.system(.largeTitle, design: .rounded))
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+                .frame(width: 60, height: 60)
+                .background(Color.accentColor.gradient, in: Circle())
+            Text("Sign in, or sign up to create an account")
+        } footer: {
+            Label("""
+                When you sign up with a passkey, all you need is a user name. \
+                The passkey will be available on all of your devices.
+                """, systemImage: "person.badge.key.fill")
         }
+        .padding(10)
     }
 }
 

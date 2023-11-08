@@ -1,0 +1,17 @@
+[package]
+name = "well-known"
+authors = ["Stuart Harris <stuart.harris@red-badger.com>"]
+description = "serve /.well-known/..."
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "1"
+http = "0.2"
+include_dir = "0.7.3"
+spin-sdk = { git = "https://github.com/fermyon/spin", tag = "v1.5.1" }
+
+[workspace]

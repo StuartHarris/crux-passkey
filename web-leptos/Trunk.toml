@@ -23,7 +23,7 @@ ignore = []
 # The address to serve on.
 address = "0.0.0.0"
 # The port to serve on.
-port = 3005
+port = 443
 # Open a browser tab once the initial build is complete.
 open = true
 # Disable auto-reload of the web app.
@@ -39,5 +39,6 @@ cargo = false
 # This proxy example has an insecure field. In this example,
 # connections to https://localhost:9000/api/v3/ will not have certificate validation performed.
 # This is useful for development with a server using self-signed certificates.
-backend = "https://localhost:3000/auth/"
-insecure = true
+# backend = "https://localhost/auth/"
+# insecure = true
+backend = "https://crux-passkey-server-yrx9iojr.fermyon.app/auth/"

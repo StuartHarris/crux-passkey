@@ -20,10 +20,11 @@ use webauthn_rs::{
 };
 const LOGIN_COOKIE: &str = "crux-passkey.login";
 const REGISTER_COOKIE: &str = "crux-passkey.register";
+const DOMAIN: &str = "crux-passkey-server-yrx9iojr.fermyon.app";
 
 fn webauthn() -> webauthn_rs::Webauthn {
-    let rp_id = "localhost";
-    let rp_origin = Url::parse(&format!("http://{rp_id}:3005")).expect("valid URL");
+    let rp_id = DOMAIN;
+    let rp_origin = Url::parse(&format!("https://{rp_id}")).expect("valid URL");
     let webauthn = WebauthnBuilder::new(rp_id, &rp_origin)
         .expect("Invalid configuration")
         .rp_name("Spin Webauthn-rs")

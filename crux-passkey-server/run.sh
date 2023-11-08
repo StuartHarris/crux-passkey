@@ -23,7 +23,7 @@ export OPENSSL_DIR
 OPENSSL_DIR=$(pwd)/webauthn/openssl_wasm/precompiled/
 
 spin build --up \
-  --listen '0.0.0.0:3000' \
+  --listen '0.0.0.0:443' \
   --tls-key $key \
   --tls-cert $cert \
   --sqlite @migration.sql

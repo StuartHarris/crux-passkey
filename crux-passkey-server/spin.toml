@@ -18,3 +18,16 @@ route = "/auth/..."
 command = "cargo build --target wasm32-wasi --release"
 workdir = "webauthn"
 watch = ["src/**/*.rs", "Cargo.toml"]
+
+[[component]]
+id = "well-known"
+source = "well-known/target/wasm32-wasi/release/well_known.wasm"
+allowed_http_hosts = []
+
+[component.trigger]
+route = "/.well-known/..."
+
+[component.build]
+command = "cargo build --target wasm32-wasi --release"
+workdir = "well-known"
+watch = ["src/**/*.rs", "Cargo.toml"]

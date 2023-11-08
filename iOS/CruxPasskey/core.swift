@@ -1,12 +1,16 @@
+import AuthenticationServices
 import Foundation
 import SharedTypes
+import SwiftUI
 
 @MainActor
 class Core: ObservableObject {
     @Published var view: ViewModel
 
+    private var passkeyController = PasskeyController()
+
     init() {
-        self.view = try! .bincodeDeserialize(input: [UInt8](CruxPasskey.view()))
+        view = try! .bincodeDeserialize(input: [UInt8](CruxPasskey.view()))
     }
 
     func update(_ event: Event) {
@@ -22,13 +26,13 @@ class Core: ObservableObject {
         switch request.effect {
         case .render:
             view = try! .bincodeDeserialize(input: [UInt8](CruxPasskey.view()))
-            
+
         case let .passkey(req):
             Task {
-                let response = try! await requestPasskey(req).get()
-                
+                let response = try! await passkeyController.requestPasskey(req).get()
+
                 let effects = [UInt8](handleResponse(Data(request.uuid), Data(try! response.bincodeSerialize())))
-                
+
                 let requests: [Request] = try! .bincodeDeserialize(input: effects)
                 for request in requests {
                     processEffect(request)
