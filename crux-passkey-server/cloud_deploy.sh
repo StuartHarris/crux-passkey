@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -euo pipefail
+
 # shellcheck source=.env
 source .env
 
