@@ -1,17 +1,17 @@
 use crux_core::capability::{CapabilityContext, Operation};
 use crux_macros::Capability;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum PasskeyOperation {
-    Register(String),
-    Login(String),
+    CreateCredential(Vec<u8>),
+    RequestCredential(Vec<u8>),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum PasskeyOutput {
-    Registered,
-    LoggedIn,
+    RegisterCredential(Vec<u8>),
+    Credential(Vec<u8>),
 }
 
 impl Operation for PasskeyOperation {
@@ -31,29 +31,41 @@ where
         Self { context }
     }
 
-    pub fn register(&self, user_name: String, event: Ev)
+    pub fn create_credential<F, T>(&self, challenge: Vec<u8>, make_event: F)
     where
-        Ev: Send,
+        F: Fn(T) -> Ev + Clone + Send + 'static,
+        T: DeserializeOwned,
     {
         let ctx = self.context.clone();
         self.context.spawn(async move {
-            ctx.request_from_shell(PasskeyOperation::Register(user_name))
+            let cred = ctx
+                .request_from_shell(PasskeyOperation::CreateCredential(challenge))
                 .await;
 
-            ctx.update_app(event);
+            if let PasskeyOutput::RegisterCredential(cred) = cred {
+                let cred = serde_json::from_slice(&cred).expect("Failed to deserialize cred");
+                let event = make_event(cred);
+                ctx.update_app(event);
+            }
         });
     }
 
-    pub fn login(&self, user_name: String, event: Ev)
+    pub fn request_credential<F, T>(&self, challenge: Vec<u8>, make_event: F)
     where
-        Ev: Send,
+        F: Fn(T) -> Ev + Clone + Send + 'static,
+        T: DeserializeOwned,
     {
         let ctx = self.context.clone();
         self.context.spawn(async move {
-            ctx.request_from_shell(PasskeyOperation::Login(user_name))
+            let cred = ctx
+                .request_from_shell(PasskeyOperation::RequestCredential(challenge))
                 .await;
 
-            ctx.update_app(event);
+            if let PasskeyOutput::Credential(cred) = cred {
+                let cred = serde_json::from_slice(&cred).expect("Failed to deserialize cred");
+                let event = make_event(cred);
+                ctx.update_app(event);
+            }
         });
     }
 }

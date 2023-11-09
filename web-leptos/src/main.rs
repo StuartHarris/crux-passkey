@@ -1,4 +1,5 @@
 mod core;
+mod http;
 mod passkey;
 
 use leptos::{
