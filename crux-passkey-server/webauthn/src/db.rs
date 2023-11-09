@@ -1,5 +1,5 @@
 use anyhow::Result;
-use spin_sdk::sqlite::{self, Connection, Value};
+use spin_sdk::sqlite::{Connection, QueryResult, Value};
 use uuid::Uuid;
 use webauthn_rs::prelude::{Base64UrlSafeData, Passkey};
 
@@ -48,7 +48,7 @@ pub(crate) fn save_credentials(
     connection: &Connection,
     user_unique_id: &Uuid,
     passkey: &Passkey,
-) -> Result<sqlite::QueryResult> {
+) -> Result<QueryResult> {
     Ok(connection.execute(
         "INSERT INTO credentials (user_id, credentials) VALUES (?1, ?2)",
         &[
@@ -62,7 +62,7 @@ pub(crate) fn save_user(
     connection: &Connection,
     username: &str,
     user_unique_id: &Uuid,
-) -> Result<sqlite::QueryResult> {
+) -> Result<QueryResult> {
     Ok(connection.execute(
         "INSERT INTO user (user_name, user_id) VALUES (?1, ?2)",
         &[

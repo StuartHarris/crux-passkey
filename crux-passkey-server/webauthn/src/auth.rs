@@ -1,41 +1,40 @@
 use crate::{
-    bad_request, db,
+    db,
     session::{Session, SessionStore, SqliteSessionStore},
 };
 use anyhow::Result;
 use spin_sdk::{
     http::{IntoResponse, Params, Request, Response},
     sqlite::Connection,
-    variables,
 };
-use url::Url;
+
 use uuid::Uuid;
 use webauthn_rs::{
-    self,
     prelude::{
         CredentialID, PasskeyAuthentication, PasskeyRegistration, PublicKeyCredential,
-        RegisterPublicKeyCredential,
+        RegisterPublicKeyCredential, Url,
     },
-    WebauthnBuilder,
+    Webauthn, WebauthnBuilder,
 };
 
 const LOGIN_COOKIE: &str = "crux-passkey.login";
 const REGISTER_COOKIE: &str = "crux-passkey.register";
 
-fn webauthn() -> webauthn_rs::Webauthn {
-    let rp_id = variables::get("rp_id").expect("variable rp_id not set");
-    let rp_origin = Url::parse(&format!("https://{rp_id}")).expect("valid URL");
-    let webauthn = WebauthnBuilder::new(&rp_id, &rp_origin)
-        .expect("Invalid configuration")
-        .rp_name("Spin Webauthn-rs")
-        .build()
-        .expect("Invalid configuration");
-    webauthn
+fn webauthn() -> Result<Webauthn> {
+    // let rp_id = variables::get("rp_id")?;
+    let rp_id = "crux-passkey-server-9uqexpm2.fermyon.app";
+    let rp_origin = Url::parse(&format!("https://{rp_id}"))?;
+    let webauthn = WebauthnBuilder::new(&rp_id, &rp_origin)?
+        .rp_name("Crux Passkey")
+        .build()?;
+    Ok(webauthn)
 }
 
 pub(crate) fn register_start(_req: Request, params: Params) -> Result<impl IntoResponse> {
+    println!("register_start");
+
     let Some(username) = params.get("username") else {
-        return Ok(bad_request("no username"));
+        return Ok(Response::new(400, "no username"));
     };
 
     println!("Registering user: {}", username);
@@ -50,7 +49,7 @@ pub(crate) fn register_start(_req: Request, params: Params) -> Result<impl IntoR
         db::get_user_credential_ids(&connection, user_unique_id)?;
     println!("exclude_credentials: {:?}", exclude_credentials);
 
-    match webauthn().start_passkey_registration(
+    match webauthn()?.start_passkey_registration(
         user_unique_id,
         &username,
         &username,
@@ -71,14 +70,14 @@ pub(crate) fn register_start(_req: Request, params: Params) -> Result<impl IntoR
         }
         Err(e) => {
             println!("register_start: {:?}", e);
-            return Err(e.into());
+            Ok(Response::new(400, format!("error {:?}", e)))
         }
     }
 }
 
 pub(crate) fn register_finish(req: Request, _params: Params) -> Result<impl IntoResponse> {
     let Some(session) = Session::retrieve(&req, REGISTER_COOKIE)? else {
-        return Ok(bad_request("no session"));
+        return Ok(Response::new(400, "no session"));
     };
 
     let reg: RegisterPublicKeyCredential = serde_json::from_slice(req.body())?;
@@ -86,7 +85,7 @@ pub(crate) fn register_finish(req: Request, _params: Params) -> Result<impl Into
     let (username, user_unique_id, reg_state): (String, Uuid, PasskeyRegistration) =
         serde_json::from_slice(session.data.as_slice())?;
 
-    match webauthn().finish_passkey_registration(&reg, &reg_state) {
+    match webauthn()?.finish_passkey_registration(&reg, &reg_state) {
         Ok(passkey) => {
             let connection = Connection::open_default()?;
             db::save_user(&connection, &username, &user_unique_id)?;
@@ -103,17 +102,17 @@ pub(crate) fn register_finish(req: Request, _params: Params) -> Result<impl Into
 
 pub(crate) fn login_start(_req: Request, params: Params) -> Result<impl IntoResponse> {
     let Some(username) = params.get("username") else {
-        return Ok(bad_request("no username"));
+        return Ok(Response::new(400, "no username"));
     };
 
     let connection = Connection::open_default()?;
     let user_unique_id = db::get_user_unique_id(&connection, username)?;
     let credentials = db::get_user_credentials(&connection, &user_unique_id)?;
     if credentials.len() == 0 {
-        return Ok(bad_request("no credentials found"));
+        return Ok(Response::new(400, "no credentials found"));
     }
 
-    match webauthn().start_passkey_authentication(credentials.as_slice()) {
+    match webauthn()?.start_passkey_authentication(credentials.as_slice()) {
         Ok((rcr, auth_state)) => {
             let mut session = Session::new();
             session.data = serde_json::to_vec(&(user_unique_id, auth_state))?;
@@ -136,7 +135,7 @@ pub(crate) fn login_start(_req: Request, params: Params) -> Result<impl IntoResp
 
 pub(crate) fn login_finish(req: Request, _params: Params) -> Result<impl IntoResponse> {
     let Some(session) = Session::retrieve(&req, LOGIN_COOKIE)? else {
-        return Ok(bad_request("no session"));
+        return Ok(Response::new(400, "no session"));
     };
 
     let auth: PublicKeyCredential = serde_json::from_slice(req.body())?;
@@ -144,7 +143,7 @@ pub(crate) fn login_finish(req: Request, _params: Params) -> Result<impl IntoRes
     let (user_unique_id, auth_state): (Uuid, PasskeyAuthentication) =
         serde_json::from_slice(session.data.as_slice())?;
 
-    match webauthn().finish_passkey_authentication(&auth, &auth_state) {
+    match webauthn()?.finish_passkey_authentication(&auth, &auth_state) {
         Ok(auth_result) => {
             let connection = Connection::open_default()?;
             for cred in db::get_user_credentials(&connection, &user_unique_id)?

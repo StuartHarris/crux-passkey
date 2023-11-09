@@ -12,7 +12,7 @@ class PasskeyController:
     ASAuthorizationControllerPresentationContextProviding,
     ASAuthorizationControllerDelegate
 {
-    let domain = "crux-passkey-server-yrx9iojr.fermyon.app"
+    let domain = "crux-passkey-server-9uqexpm2.fermyon.app"
 
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         return ASPresentationAnchor()
