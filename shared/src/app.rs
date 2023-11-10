@@ -9,8 +9,9 @@ use webauthn_rs_proto::{
     RequestChallengeResponse,
 };
 
-// const SERVER_URL: &str = "https://crux-passkey-server-9uqexpm2.fermyon.app"; // todo: config
-const SERVER_URL: &str = "https://localhost"; // todo: config
+const SERVER_URL: &str = "https://crux-passkey-server-9uqexpm2.fermyon.app"; // todo: config
+
+// const SERVER_URL: &str = "https://localhost"; // todo: config
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Event {
@@ -22,16 +23,20 @@ pub enum Event {
     Login(String),
 
     // http...
+    #[serde(skip)]
     GetCreationChallenge(String), // register
-    GetRequestChallenge(String),  // login
+    #[serde(skip)]
+    GetRequestChallenge(String), // login
 
     #[serde(skip)]
     CreationChallenge(crux_http::Result<crux_http::Response<CreationChallengeResponse>>), // register
     #[serde(skip)]
     RequestChallenge(crux_http::Result<crux_http::Response<RequestChallengeResponse>>), // login
 
+    #[serde(skip)]
     SaveCredential(RegisterPublicKeyCredential), // register
-    VerifyCredential(PublicKeyCredential),       // login
+    #[serde(skip)]
+    VerifyCredential(PublicKeyCredential), // login
 
     #[serde(skip)]
     CredentialRegistered(crux_http::Result<crux_http::Response<Vec<u8>>>), // register
@@ -39,11 +44,15 @@ pub enum Event {
     CredentialVerified(crux_http::Result<crux_http::Response<Vec<u8>>>), // login
 
     // passkey...
+    #[serde(skip)]
     CreateCredential(CreationChallengeResponse), // register
+    #[serde(skip)]
     RequestCredential(RequestChallengeResponse), // login
 
+    #[serde(skip)]
     RegisterCredential(RegisterPublicKeyCredential), // register
-    Credential(PublicKeyCredential),                 // login
+    #[serde(skip)]
+    Credential(PublicKeyCredential), // login
 
     #[serde(skip)]
     Error(String),
