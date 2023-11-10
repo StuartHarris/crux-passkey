@@ -10,39 +10,25 @@ enum PasskeyError: Error {
 class PasskeyCapability {
     func request(_ request: PasskeyOperation) async -> Result<PasskeyOutput, PasskeyError> {
         switch request {
-        case .createCredential(let bytes):
-            let challenge = try! JSONDecoder().decode(PublicKeyResponse.self, from: Data(bytes))
+        case let .createCredential(bytes):
+            let challenge = try! PublicKeyResponse.from(bytes)
             let controller = PasskeyController(pubKeyResponse: challenge)
+
             let credential = await controller.signUp() as! ASAuthorizationPlatformPublicKeyCredentialRegistration
-            let id = credential.credentialID.base64EncodedString()
-            let payload = RegisterCredential(
-                id: id,
-                rawId: id,
-                type: "public-key",
-                response: AttestationResponse(
-                    attestationObject: credential.rawAttestationObject!.base64EncodedString(),
-                    clientDataJSON: credential.rawClientDataJSON.base64EncodedString()
-                )
-            )
+
+            let payload = RegisterCredential.from(credential)
             let body = try! JSONEncoder().encode(payload)
+
             return .success(.registerCredential([UInt8](body)))
-        case .requestCredential(let bytes):
-            let challenge = try! JSONDecoder().decode(PublicKeyResponse.self, from: Data(bytes))
+        case let .requestCredential(bytes):
+            let challenge = try! PublicKeyResponse.from(bytes)
             let controller = PasskeyController(pubKeyResponse: challenge)
+
             let credential = await controller.signIn() as! ASAuthorizationPlatformPublicKeyCredentialAssertion
-            let id = credential.credentialID.base64EncodedString()
-            let payload = Credential(
-                id: id,
-                rawId: id,
-                type: "public-key",
-                response: AssertionResponse(
-                    authenticatorData: credential.rawAuthenticatorData.base64EncodedString(),
-                    clientDataJSON: credential.rawClientDataJSON.base64EncodedString(),
-                    signature: credential.signature.base64EncodedString(),
-                    userHandle: credential.userID.base64EncodedString()
-                )
-            )
+
+            let payload = Credential.from(credential)
             let body = try! JSONEncoder().encode(payload)
+
             return .success(.credential([UInt8](body)))
         }
     }
@@ -54,13 +40,15 @@ class PasskeyController:
     ASAuthorizationControllerDelegate
 {
     let domain = "crux-passkey-server-9uqexpm2.fermyon.app"
+
     var completion: ((ASAuthorizationCredential) -> Void)?
+
     fileprivate var pubKeyResponse: PublicKeyResponse
-    
+
     fileprivate init(pubKeyResponse: PublicKeyResponse) {
         self.pubKeyResponse = pubKeyResponse
     }
-    
+
     func signUp() async -> ASAuthorizationCredential {
         await withCheckedContinuation { continuation in
             signUp(with: { credential in
@@ -68,7 +56,7 @@ class PasskeyController:
             })
         }
     }
-    
+
     func signIn() async -> ASAuthorizationCredential {
         await withCheckedContinuation { continuation in
             signIn(with: { credential in
@@ -76,16 +64,16 @@ class PasskeyController:
             })
         }
     }
-    
-    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+
+    func presentationAnchor(for _: ASAuthorizationController) -> ASPresentationAnchor {
         return ASPresentationAnchor()
     }
 
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+    func authorizationController(controller _: ASAuthorizationController, didCompleteWithError error: Error) {
         print("authorization failed: \(error)")
     }
 
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+    func authorizationController(controller _: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         guard let completion else {
             return
         }
@@ -94,7 +82,7 @@ class PasskeyController:
 
     func signUp(with completion: @escaping (ASAuthorizationCredential) -> Void) {
         self.completion = completion
-        
+
         let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: domain)
 
         let publicKey = pubKeyResponse.publicKey
@@ -111,7 +99,7 @@ class PasskeyController:
 
     func signIn(with completion: @escaping (ASAuthorizationCredential) -> Void) {
         self.completion = completion
-        
+
         let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: domain)
 
         let publicKey = pubKeyResponse.publicKey
@@ -126,6 +114,10 @@ class PasskeyController:
 
 private struct PublicKeyResponse: Codable {
     var publicKey: PublicKey
+
+    static func from(_ of: [UInt8]) throws -> Self {
+        return try JSONDecoder().decode(PublicKeyResponse.self, from: Data(of))
+    }
 }
 
 private struct PublicKey: Codable {
@@ -144,6 +136,19 @@ private struct RegisterCredential: Codable {
     var rawId: String
     var type: String
     var response: AttestationResponse
+
+    static func from(_ of: ASAuthorizationPlatformPublicKeyCredentialRegistration) -> Self {
+        let id = of.credentialID.base64EncodedString()
+        return RegisterCredential(
+            id: id,
+            rawId: id,
+            type: "public-key",
+            response: AttestationResponse(
+                attestationObject: of.rawAttestationObject!.base64EncodedString(),
+                clientDataJSON: of.rawClientDataJSON.base64EncodedString()
+            )
+        )
+    }
 }
 
 private struct AttestationResponse: Codable {
@@ -156,6 +161,21 @@ private struct Credential: Codable {
     var rawId: String
     var type: String
     var response: AssertionResponse
+
+    static func from(_ of: ASAuthorizationPlatformPublicKeyCredentialAssertion) -> Self {
+        let id = of.credentialID.base64EncodedString()
+        return Credential(
+            id: id,
+            rawId: id,
+            type: "public-key",
+            response: AssertionResponse(
+                authenticatorData: of.rawAuthenticatorData.base64EncodedString(),
+                clientDataJSON: of.rawClientDataJSON.base64EncodedString(),
+                signature: of.signature.base64EncodedString(),
+                userHandle: of.userID.base64EncodedString()
+            )
+        )
+    }
 }
 
 private struct AssertionResponse: Codable {
