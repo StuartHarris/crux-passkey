@@ -22,7 +22,7 @@ pub enum Event {
     Register(String),
     Login(String),
 
-    // http...
+    // driven...
     #[serde(skip)]
     GetCreationChallenge(String), // register
     #[serde(skip)]
@@ -34,36 +34,17 @@ pub enum Event {
     RequestChallenge(crux_http::Result<crux_http::Response<RequestChallengeResponse>>), // login
 
     #[serde(skip)]
-    SaveCredential(RegisterPublicKeyCredential), // register
+    RegisterCredential(RegisterPublicKeyCredential), // register
     #[serde(skip)]
-    VerifyCredential(PublicKeyCredential), // login
+    Credential(PublicKeyCredential), // login
 
     #[serde(skip)]
     CredentialRegistered(crux_http::Result<crux_http::Response<Vec<u8>>>), // register
     #[serde(skip)]
     CredentialVerified(crux_http::Result<crux_http::Response<Vec<u8>>>), // login
 
-    // passkey...
-    #[serde(skip)]
-    CreateCredential(CreationChallengeResponse), // register
-    #[serde(skip)]
-    RequestCredential(RequestChallengeResponse), // login
-
-    #[serde(skip)]
-    RegisterCredential(RegisterPublicKeyCredential), // register
-    #[serde(skip)]
-    Credential(PublicKeyCredential), // login
-
     #[serde(skip)]
     Error(String),
-}
-
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
-enum State {
-    #[default]
-    Steady,
-    Registering,
-    LoggingIn,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq, Eq)]
@@ -77,7 +58,6 @@ pub enum Status {
 #[derive(Default, Debug)]
 pub struct Model {
     user_name: String,
-    state: State,
     status: Status,
 }
 
@@ -104,9 +84,9 @@ impl crux_core::App for App {
     type Capabilities = Capabilities;
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
-        match (model.state.clone(), event.clone()) {
-            (_, Event::None) => {}
-            (State::Steady, Event::Validate(user_name)) => {
+        match event.clone() {
+            Event::None => {}
+            Event::Validate(user_name) => {
                 if user_name.is_empty() {
                     model.status = Status::Error("user name cannot be empty".to_string());
                 } else {
@@ -114,39 +94,38 @@ impl crux_core::App for App {
                 }
                 caps.render.render();
             }
-            (State::Steady, Event::Register(user_name)) => {
+            Event::Register(user_name) => {
                 self.update(Event::Validate(user_name.clone()), model, caps);
                 if model.status == Status::None {
                     info!("registering user: {}", user_name);
                     model.user_name = user_name.clone();
-                    model.state = State::Registering;
                     model.status = Status::Info(format!(r#"registering "{user_name}"..."#));
                     caps.render.render();
                     self.update(Event::GetCreationChallenge(user_name), model, caps);
                 }
             }
-            (State::Registering, Event::GetCreationChallenge(user_name)) => {
+            Event::GetCreationChallenge(user_name) => {
                 info!("getting creation challenge for user: {}", user_name);
                 caps.http
                     .get(format!("{SERVER_URL}/auth/register_start/{}", user_name))
                     .expect_json()
                     .send(Event::CreationChallenge);
             }
-            (State::Registering, Event::CreationChallenge(Ok(mut response))) => {
+            Event::CreationChallenge(Ok(mut response)) => {
                 let ccr = response.take_body().expect("http response has a body");
                 let bytes = serde_json::to_vec(&ccr).expect("json serializable");
                 info!("ask authenticator to create credential");
                 caps.passkey
                     .create_credential(bytes, Event::RegisterCredential);
             }
-            (State::Registering, Event::CreationChallenge(Err(e))) => {
+            Event::CreationChallenge(Err(e)) => {
                 self.update(
                     Event::Error(format!("failed to get creation challenge: {:?}", e)),
                     model,
                     caps,
                 );
             }
-            (State::Registering, Event::RegisterCredential(cred)) => {
+            Event::RegisterCredential(cred) => {
                 info!("registering credential");
                 caps.http
                     .post(format!("{SERVER_URL}/auth/register_finish"))
@@ -154,53 +133,51 @@ impl crux_core::App for App {
                     .expect("json serializable")
                     .send(Event::CredentialRegistered);
             }
-            (State::Registering, Event::CredentialRegistered(Ok(_))) => {
-                model.state = State::Steady;
+            Event::CredentialRegistered(Ok(_)) => {
                 model.status = Status::Info(format!(
                     r#"registered "{user_name}""#,
                     user_name = model.user_name
                 ));
                 caps.render.render();
             }
-            (State::Registering, Event::CredentialRegistered(Err(e))) => {
+            Event::CredentialRegistered(Err(e)) => {
                 self.update(
                     Event::Error(format!("failed to register: {:?}", e)),
                     model,
                     caps,
                 );
             }
-            (State::Steady, Event::Login(user_name)) => {
+            Event::Login(user_name) => {
                 self.update(Event::Validate(user_name.clone()), model, caps);
                 if model.status == Status::None {
                     info!("logging in user: {}", user_name);
                     model.user_name = user_name.clone();
-                    model.state = State::LoggingIn;
                     model.status = Status::Info(format!(r#"logging in "{user_name}"..."#));
                     caps.render.render();
                     self.update(Event::GetRequestChallenge(user_name), model, caps);
                 }
             }
-            (State::LoggingIn, Event::GetRequestChallenge(user_name)) => {
+            Event::GetRequestChallenge(user_name) => {
                 info!("getting request challenge for user: {}", user_name);
                 caps.http
                     .get(format!("{SERVER_URL}/auth/login_start/{}", user_name))
                     .expect_json()
                     .send(Event::RequestChallenge);
             }
-            (State::LoggingIn, Event::RequestChallenge(Ok(mut response))) => {
+            Event::RequestChallenge(Ok(mut response)) => {
                 let rcr = response.take_body().expect("http response has a body");
                 let bytes = serde_json::to_vec(&rcr).expect("json serializable");
                 info!("ask authenticator to request credential");
                 caps.passkey.request_credential(bytes, Event::Credential);
             }
-            (State::LoggingIn, Event::RequestChallenge(Err(e))) => {
+            Event::RequestChallenge(Err(e)) => {
                 self.update(
                     Event::Error(format!("failed to get request challenge: {:?}", e)),
                     model,
                     caps,
                 );
             }
-            (State::LoggingIn, Event::Credential(cred)) => {
+            Event::Credential(cred) => {
                 info!("verifying credential");
                 caps.http
                     .post(format!("{SERVER_URL}/auth/login_finish"))
@@ -208,28 +185,23 @@ impl crux_core::App for App {
                     .expect("json serializable")
                     .send(Event::CredentialVerified);
             }
-            (State::LoggingIn, Event::CredentialVerified(Ok(_))) => {
-                model.state = State::Steady;
+            Event::CredentialVerified(Ok(_)) => {
                 model.status = Status::Info(format!(
                     r#"logged in "{user_name}""#,
                     user_name = model.user_name
                 ));
                 caps.render.render();
             }
-            (State::LoggingIn, Event::CredentialVerified(Err(e))) => {
+            Event::CredentialVerified(Err(e)) => {
                 self.update(
                     Event::Error(format!("failed to login: {:?}", e)),
                     model,
                     caps,
                 );
             }
-            (_, Event::Error(e)) => {
-                model.state = State::Steady;
+            Event::Error(e) => {
                 model.status = Status::Error(e);
                 caps.render.render();
-            }
-            (s, m) => {
-                info!("Invalid State Transition -> {s:?}, {m:?}");
             }
         };
 
