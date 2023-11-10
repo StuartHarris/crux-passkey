@@ -9,7 +9,7 @@ struct ContentView: View {
     
     init(core: Core) {
         self.core = core
-        core.update(.serverUrl("https://\(Constants.domain)"))
+        core.update(.serverUrl("https://\(rp_id!)"))
     }
     
     var body: some View {

@@ -81,7 +81,7 @@ class PasskeyController:
     func signUp(with completion: @escaping (ASAuthorizationCredential) -> Void) {
         self.completion = completion
 
-        let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: Constants.domain)
+        let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: rp_id!)
 
         let publicKey = pubKeyResponse.publicKey
         let decodedChallenge = Data(base64URLEncoded: publicKey.challenge)
@@ -98,7 +98,7 @@ class PasskeyController:
     func signIn(with completion: @escaping (ASAuthorizationCredential) -> Void) {
         self.completion = completion
 
-        let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: Constants.domain)
+        let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: rp_id!)
 
         let publicKey = pubKeyResponse.publicKey
         let decodedChallenge = Data(base64URLEncoded: publicKey.challenge)

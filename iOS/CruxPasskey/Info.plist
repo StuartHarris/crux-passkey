@@ -26,5 +26,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>rp_id</key>
+	<string>crux-passkey-server-9uqexpm2.fermyon.app</string>
 </dict>
 </plist>

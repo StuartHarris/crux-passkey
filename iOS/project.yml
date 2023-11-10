@@ -12,6 +12,10 @@ targets:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
+    entitlements:
+      path: CruxPasskey/CruxPasskey.entitlements
+      properties:
+        com.apple.developer.associated-domains: webcredentials:crux-passkey-server-9uqexpm2.fermyon.app?mode=developer
     sources:
       - CruxPasskey
       - path: ../shared/src/shared.udl
@@ -28,6 +32,7 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         UILaunchScreen: {}
+        rp_id: crux-passkey-server-9uqexpm2.fermyon.app
     settings:
       OTHER_LDFLAGS: [-w]
       SWIFT_OBJC_BRIDGING_HEADER: generated/sharedFFI.h
