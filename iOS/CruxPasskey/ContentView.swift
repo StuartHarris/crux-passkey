@@ -4,9 +4,13 @@ import AuthenticationServices
 
 struct ContentView: View {
     @ObservedObject var core: Core
-//    @EnvironmentObject private var accountStore: AccountStore
     @State private var username: String = ""
     @FocusState private var usernameFieldIsFocused: Bool
+    
+    init(core: Core) {
+        self.core = core
+        core.update(.serverUrl("https://\(Constants.domain)"))
+    }
     
     var body: some View {
         Section {

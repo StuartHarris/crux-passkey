@@ -1,9 +1,10 @@
 mod core;
+mod http;
 mod passkey;
 
 use leptos::{
     component, create_effect, create_node_ref, create_signal, ev::SubmitEvent, event_target_value,
-    html::Input, view, IntoView, NodeRef, SignalGet, SignalUpdate,
+    html::Input, view, window, IntoView, NodeRef, SignalGet, SignalUpdate,
 };
 use shared::Event;
 
@@ -11,7 +12,9 @@ use shared::Event;
 fn RootComponent() -> impl IntoView {
     let core = core::new();
     let (view, render) = create_signal(core.view());
-    let (event, set_event) = create_signal(Event::None);
+    let (event, set_event) = create_signal(Event::ServerUrl(
+        window().location().origin().expect("origin to exist"),
+    ));
 
     create_effect(move |_| {
         core::update(&core, event.get(), render);

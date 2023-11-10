@@ -19,6 +19,7 @@ OPENSSL_DIR=$(pwd)/webauthn/openssl_wasm/precompiled/
 (
   cd ../web-leptos/ &&
     trunk build --release &&
+    mkdir -p ../crux-passkey-server/static/ &&
     cp dist/* ../crux-passkey-server/static/
 )
 
