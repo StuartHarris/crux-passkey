@@ -16,6 +16,7 @@
 		A307864345730D1262CE18AC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C68179492055D96C9B8A9A2A /* ContentView.swift */; };
 		C15F8E602ADBDA03F986C0C2 /* libshared_static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 164633B29E3A02F4AC7DF571 /* libshared_static.a */; };
 		CBF26363420FB2F47B4159A2 /* CruxPasskeyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E11F683B3D5B8E0A4566306 /* CruxPasskeyApp.swift */; };
+		CC199ACC2AFE2C5800660288 /* http.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC199ACB2AFE2C5800660288 /* http.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -89,6 +90,7 @@
 		6F7D93D5D403E13BF5D4378E /* CruxPasskey.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CruxPasskey.entitlements; sourceTree = "<group>"; };
 		9797B29EB4E4F9AFF0EC6E29 /* Shared */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Shared; path = ../shared/shared.xcodeproj; sourceTree = "<group>"; };
 		C68179492055D96C9B8A9A2A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		CC199ACB2AFE2C5800660288 /* http.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = http.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,6 +162,7 @@
 				0A363D2C34B965F20D1371AC /* Data+Base64URL.swift */,
 				5507F68490A8079E3906948D /* Info.plist */,
 				466320EDA655F5A2650B075A /* passkey.swift */,
+				CC199ACB2AFE2C5800660288 /* http.swift */,
 			);
 			path = CruxPasskey;
 			sourceTree = "<group>";
@@ -274,6 +277,7 @@
 				CBF26363420FB2F47B4159A2 /* CruxPasskeyApp.swift in Sources */,
 				684BB9DB146B996C576F93ED /* Data+Base64URL.swift in Sources */,
 				8584282A3314421D65445E17 /* core.swift in Sources */,
+				CC199ACC2AFE2C5800660288 /* http.swift in Sources */,
 				835C8A91125FDB13D7D7773E /* passkey.swift in Sources */,
 				8F07F9D0CAB6B1EA68EE2E14 /* shared.udl in Sources */,
 			);
