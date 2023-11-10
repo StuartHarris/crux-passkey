@@ -84,14 +84,15 @@ impl crux_core::App for App {
     type Capabilities = Capabilities;
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
-        match event.clone() {
+        info!("update: {:?}", event);
+        match event {
             Event::None => {}
             Event::Validate(user_name) => {
-                if user_name.is_empty() {
-                    model.status = Status::Error("user name cannot be empty".to_string());
+                model.status = if user_name.is_empty() {
+                    Status::Error("user name cannot be empty".to_string())
                 } else {
-                    model.status = Status::None;
-                }
+                    Status::None
+                };
                 caps.render.render();
             }
             Event::Register(user_name) => {
@@ -204,8 +205,6 @@ impl crux_core::App for App {
                 caps.render.render();
             }
         };
-
-        info!("update: {:?} {:?}", event, model);
     }
 
     fn view(&self, model: &Self::Model) -> Self::ViewModel {
