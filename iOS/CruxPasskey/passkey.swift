@@ -39,8 +39,6 @@ class PasskeyController:
     ASAuthorizationControllerPresentationContextProviding,
     ASAuthorizationControllerDelegate
 {
-    let domain = "crux-passkey-server-9uqexpm2.fermyon.app"
-
     var completion: ((ASAuthorizationCredential) -> Void)?
 
     fileprivate var pubKeyResponse: PublicKeyResponse
@@ -83,7 +81,7 @@ class PasskeyController:
     func signUp(with completion: @escaping (ASAuthorizationCredential) -> Void) {
         self.completion = completion
 
-        let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: domain)
+        let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: Constants.domain)
 
         let publicKey = pubKeyResponse.publicKey
         let decodedChallenge = Data(base64URLEncoded: publicKey.challenge)
@@ -100,7 +98,7 @@ class PasskeyController:
     func signIn(with completion: @escaping (ASAuthorizationCredential) -> Void) {
         self.completion = completion
 
-        let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: domain)
+        let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: Constants.domain)
 
         let publicKey = pubKeyResponse.publicKey
         let decodedChallenge = Data(base64URLEncoded: publicKey.challenge)

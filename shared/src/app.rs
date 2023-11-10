@@ -9,15 +9,15 @@ use webauthn_rs_proto::{
     RequestChallengeResponse,
 };
 
-const SERVER_URL: &str = "https://crux-passkey-server-9uqexpm2.fermyon.app"; // todo: config
-
-// const SERVER_URL: &str = "https://localhost"; // todo: config
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Config {
+    pub server_url: String,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Event {
-    None,
-
     // driving...
+    ServerUrl(String),
     Validate(String),
     Register(String),
     Login(String),
@@ -57,6 +57,7 @@ pub enum Status {
 
 #[derive(Default, Debug)]
 pub struct Model {
+    server_url: Option<String>,
     user_name: String,
     status: Status,
 }
@@ -85,8 +86,11 @@ impl crux_core::App for App {
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         info!("update: {:?}", event);
+        let server_url = model.server_url.as_deref().unwrap_or("https://localhost");
         match event {
-            Event::None => {}
+            Event::ServerUrl(url) => {
+                model.server_url = Some(url);
+            }
             Event::Validate(user_name) => {
                 model.status = if user_name.is_empty() {
                     Status::Error("user name cannot be empty".to_string())
@@ -108,7 +112,7 @@ impl crux_core::App for App {
             Event::GetCreationChallenge(user_name) => {
                 info!("getting creation challenge for user: {}", user_name);
                 caps.http
-                    .get(format!("{SERVER_URL}/auth/register_start/{}", user_name))
+                    .get(format!("{server_url}/auth/register_start/{user_name}"))
                     .expect_json()
                     .send(Event::CreationChallenge);
             }
@@ -129,7 +133,7 @@ impl crux_core::App for App {
             Event::RegisterCredential(cred) => {
                 info!("registering credential");
                 caps.http
-                    .post(format!("{SERVER_URL}/auth/register_finish"))
+                    .post(format!("{server_url}/auth/register_finish"))
                     .body_json(&cred)
                     .expect("json serializable")
                     .send(Event::CredentialRegistered);
@@ -161,7 +165,7 @@ impl crux_core::App for App {
             Event::GetRequestChallenge(user_name) => {
                 info!("getting request challenge for user: {}", user_name);
                 caps.http
-                    .get(format!("{SERVER_URL}/auth/login_start/{}", user_name))
+                    .get(format!("{server_url}/auth/login_start/{user_name}"))
                     .expect_json()
                     .send(Event::RequestChallenge);
             }
@@ -181,7 +185,7 @@ impl crux_core::App for App {
             Event::Credential(cred) => {
                 info!("verifying credential");
                 caps.http
-                    .post(format!("{SERVER_URL}/auth/login_finish"))
+                    .post(format!("{server_url}/auth/login_finish"))
                     .body_json(&cred)
                     .expect("json serializable")
                     .send(Event::CredentialVerified);
@@ -263,7 +267,11 @@ mod tests {
     fn registration() {
         let app = AppTester::<App, _>::default();
 
-        let mut model = Model::default();
+        let server_url = &"https://localhost";
+        let mut model = Model {
+            server_url: Some(server_url.to_string()),
+            ..Default::default()
+        };
 
         let event = Event::Register("stu".to_string());
 
@@ -282,7 +290,7 @@ mod tests {
 
         // check that the request is a GET to the correct URL
         let actual = &request.operation;
-        let expected = &HttpRequest::get(format!("{SERVER_URL}/auth/register_start/stu")).build();
+        let expected = &HttpRequest::get(format!("{server_url}/auth/register_start/stu")).build();
         assert_eq!(actual, expected);
 
         // resolve the request with a simulated response from the web API
@@ -382,47 +390,6 @@ mod tests {
           Error: user name cannot be empty
         "###);
     }
-
-    // #[test]
-    // fn login() {
-    //     let app = AppTester::<App, _>::default();
-
-    //     let mut model = Model::default();
-
-    //     let event = Event::Login("stu".to_string());
-
-    //     let mut update = app.update(event, &mut model);
-    //     assert_effect!(update, Effect::Render(_));
-
-    //     insta::assert_yaml_snapshot!(app.view(&mut model), @r###"
-    //     ---
-    //     status:
-    //       Info: "logging in \"stu\"..."
-    //     "###);
-
-    //     assert_let!(Effect::Passkey(request), &mut update.effects[1]);
-
-    //     // let actual = &request.operation;
-    //     // let expected = &PasskeyOperation::Login("stu".to_string());
-    //     // assert_eq!(actual, expected);
-
-    //     // // simulate a successful response from the server
-    //     // let response = PasskeyOutput::LoggedIn;
-    //     // let update = app.resolve(request, response).expect("an update");
-
-    //     // let actual = update.events[0].clone();
-    //     // assert_matches!(actual, Event::LoggedIn);
-
-    //     // let update = app.update(actual, &mut model);
-
-    //     // assert_effect!(update, Effect::Render(_));
-
-    //     // insta::assert_yaml_snapshot!(app.view(&mut model), @r###"
-    //     // ---
-    //     // status:
-    //     //   Info: "logged in \"stu\""
-    //     // "###);
-    // }
 
     #[test]
     fn logging_in_with_empty_username() {
