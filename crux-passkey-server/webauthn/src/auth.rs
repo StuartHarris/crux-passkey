@@ -6,6 +6,7 @@ use anyhow::Result;
 use spin_sdk::{
     http::{IntoResponse, Params, Request, Response},
     sqlite::Connection,
+    variables,
 };
 
 use uuid::Uuid;
@@ -21,9 +22,7 @@ const LOGIN_COOKIE: &str = "crux-passkey.login";
 const REGISTER_COOKIE: &str = "crux-passkey.register";
 
 fn webauthn() -> Result<Webauthn> {
-    // let rp_id = variables::get("rp_id")?;
-    // let rp_id = "crux-passkey-server-9uqexpm2.fermyon.app";
-    let rp_id = "localhost";
+    let rp_id = variables::get("rp_id")?;
     let rp_origin = Url::parse(&format!("https://{rp_id}"))?;
     let webauthn = WebauthnBuilder::new(&rp_id, &rp_origin)?
         .rp_name("Crux Passkey")
