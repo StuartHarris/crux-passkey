@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use leptos::*;
 use shared::passkey::{PasskeyOperation, PasskeyOutput};
 use wasm_bindgen::UnwrapThrowExt;
@@ -31,7 +31,10 @@ pub async fn request(operation: &PasskeyOperation) -> Result<PasskeyOutput> {
                         &cred,
                     )?))
                 }
-                e @ Err(_) => Err(anyhow!("Failed to register: {:?}", e)),
+                Err(e) => Ok(PasskeyOutput::Error(format!(
+                    "Failed to create credential: {:?}",
+                    e,
+                ))),
             }
         }
         PasskeyOperation::RequestCredential(bytes) => {
@@ -53,7 +56,10 @@ pub async fn request(operation: &PasskeyOperation) -> Result<PasskeyOutput> {
 
                     Ok(PasskeyOutput::Credential(serde_json::to_vec(&cred)?))
                 }
-                e @ Err(_) => Err(anyhow!("Failed to authenticate: {:?}", e)),
+                Err(e) => Ok(PasskeyOutput::Error(format!(
+                    "Failed to authenticate: {:?}",
+                    e,
+                ))),
             }
         }
     }

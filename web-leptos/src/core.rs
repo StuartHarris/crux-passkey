@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use leptos::{spawn_local, SignalUpdate, WriteSignal};
+use log::info;
 use shared::{App, Capabilities, Effect, Event, ViewModel};
 
 use crate::{http, passkey};
@@ -37,10 +38,15 @@ pub fn process_effect(core: &Core, effect: Effect, render: WriteSignal<ViewModel
                 let core = core.clone();
 
                 async move {
-                    let response = passkey::request(&request.operation).await.unwrap();
-
-                    for effect in core.resolve(&mut request, response) {
-                        process_effect(&core, effect, render);
+                    match passkey::request(&request.operation).await {
+                        Ok(response) => {
+                            for effect in core.resolve(&mut request, response) {
+                                process_effect(&core, effect, render);
+                            }
+                        }
+                        Err(e) => {
+                            info!("Error: {:?}", e);
+                        }
                     }
                 }
             });

@@ -1,4 +1,4 @@
-use crate::capabilities::passkey::Passkey;
+use crate::{capabilities::passkey::Passkey, passkey};
 use crux_core::render::Render;
 use crux_http::Http;
 use crux_macros::Effect;
@@ -34,9 +34,9 @@ pub enum Event {
     RequestChallenge(crux_http::Result<crux_http::Response<RequestChallengeResponse>>), // login
 
     #[serde(skip)]
-    RegisterCredential(RegisterPublicKeyCredential), // register
+    RegisterCredential(passkey::Result<RegisterPublicKeyCredential>), // register
     #[serde(skip)]
-    Credential(PublicKeyCredential), // login
+    Credential(passkey::Result<PublicKeyCredential>), // login
 
     #[serde(skip)]
     CredentialRegistered(crux_http::Result<crux_http::Response<Vec<u8>>>), // register
@@ -130,13 +130,20 @@ impl crux_core::App for App {
                     caps,
                 );
             }
-            Event::RegisterCredential(cred) => {
+            Event::RegisterCredential(Ok(cred)) => {
                 info!("registering credential");
                 caps.http
                     .post(format!("{server_url}/auth/register_finish"))
                     .body_json(&cred)
                     .expect("json serializable")
                     .send(Event::CredentialRegistered);
+            }
+            Event::RegisterCredential(Err(e)) => {
+                self.update(
+                    Event::Error(format!("failed to get new credential: {:?}", e)),
+                    model,
+                    caps,
+                );
             }
             Event::CredentialRegistered(Ok(_)) => {
                 model.status = Status::Info(format!(
@@ -182,13 +189,20 @@ impl crux_core::App for App {
                     caps,
                 );
             }
-            Event::Credential(cred) => {
+            Event::Credential(Ok(cred)) => {
                 info!("verifying credential");
                 caps.http
                     .post(format!("{server_url}/auth/login_finish"))
                     .body_json(&cred)
                     .expect("json serializable")
                     .send(Event::CredentialVerified);
+            }
+            Event::Credential(Err(e)) => {
+                self.update(
+                    Event::Error(format!("failed to get credential: {:?}", e)),
+                    model,
+                    caps,
+                );
             }
             Event::CredentialVerified(Ok(_)) => {
                 model.status = Status::Info(format!(
@@ -375,7 +389,8 @@ mod tests {
 
         // check that the app emitted a RegisterCredential event
         let actual = update.events[0].clone();
-        let cred = assert_matches!(actual.clone(), Event::RegisterCredential(cred) => cred);
+        let cred =
+            assert_matches!(actual.clone(), Event::RegisterCredential(cred) => cred.unwrap());
         assert_eq!(cred.id, "QeSrHN1qZhaKqtapAs0zdg");
 
         // push the event into the app
@@ -500,7 +515,7 @@ mod tests {
 
         // check that the app emitted a Credential event
         let actual = update.events[0].clone();
-        let cred = assert_matches!(actual.clone(), Event::Credential(cred) => cred);
+        let cred = assert_matches!(actual.clone(), Event::Credential(cred) => cred.unwrap());
         assert_eq!(cred.id, "QeSrHN1qZhaKqtapAs0zdg");
 
         // push the event into the app
