@@ -1,5 +1,5 @@
 use anyhow::Result;
-use cookie::SameSite;
+use cookie::{Cookie, SameSite};
 use spin_sdk::{
     http,
     sqlite::{Connection, Value},
@@ -9,6 +9,12 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionId(pub Uuid);
+
+impl Display for SessionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl SessionId {
     fn from_request(req: &http::Request, cookie_name: &str) -> Result<Option<Self>> {
@@ -33,12 +39,6 @@ impl SessionId {
             }
         }
         Ok(None)
-    }
-}
-
-impl Display for SessionId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
     }
 }
 
@@ -69,7 +69,7 @@ impl Session {
     }
 
     pub fn cookie(&self, name: &str, path: &str) -> String {
-        cookie::Cookie::build((name, self.id.to_string()))
+        Cookie::build((name, self.id.to_string()))
             .path(path)
             .secure(true)
             .same_site(SameSite::Strict)

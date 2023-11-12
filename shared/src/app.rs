@@ -93,7 +93,7 @@ impl crux_core::App for App {
             }
             Event::Validate(user_name) => {
                 model.status = if user_name.is_empty() {
-                    Status::Error("user name cannot be empty".to_string())
+                    Status::Error(String::from("user name cannot be empty"))
                 } else {
                     Status::None
                 };
@@ -220,7 +220,7 @@ impl crux_core::App for App {
 
 #[cfg(test)]
 mod tests {
-    use crate::passkey::PasskeyOperation;
+    use crate::passkey::{PasskeyOperation, PasskeyOutput};
 
     use super::*;
     use assert_let_bind::assert_let;
@@ -234,7 +234,7 @@ mod tests {
 
         let mut model = Model::default();
 
-        let event = Event::Validate("stu".to_string());
+        let event = Event::Validate(String::from("stu"));
 
         let update = app.update(event, &mut model);
         assert_effect!(update, Effect::Render(_));
@@ -251,7 +251,7 @@ mod tests {
 
         let mut model = Model::default();
 
-        let event = Event::Validate("".to_string());
+        let event = Event::Validate(String::new());
 
         let update = app.update(event, &mut model);
         assert_effect!(update, Effect::Render(_));
@@ -267,13 +267,13 @@ mod tests {
     fn registration() {
         let app = AppTester::<App, _>::default();
 
-        let server_url = &"https://localhost";
+        let server_url = "https://localhost";
         let mut model = Model {
-            server_url: Some(server_url.to_string()),
+            server_url: Some(server_url.to_owned()),
             ..Default::default()
         };
 
-        let event = Event::Register("stu".to_string());
+        let event = Event::Register(String::from("stu"));
 
         let mut update = app.update(event, &mut model);
         assert_effect!(update, Effect::Render(_));
@@ -356,21 +356,181 @@ mod tests {
         let expected = &PasskeyOperation::CreateCredential(bytes);
         assert_eq!(actual, expected);
 
-        // simulate a successful response from the authenticator
-        // let cred = RegisterPublicKeyCredential {
-        //     id: "brs4tqNATYib4pRlF74jSg".to_string(),
-        //     raw_id: Base64UrlSafeData(vec![1, 2, 3]),
-        //     response: webauthn_rs_proto::AuthenticatorResponse::AuthenticatorAttestationResponse(
-        //         webauthn_rs_proto::AttestationResponse {
-        //             client_data_json: "client_data_json".to_string(),
-        //             attestation_object: "attestation_object".to_string(),
-        //         },
-        //     ),
-        //     type_: "public-key".to_string(),
-        //     extensions: None,
-        // };
-        // let response = PasskeyOutput::RegisterCredential(vec![1, 2, 3]);
-        // let update = app.resolve(request, response).expect("an update");
+        let cred = r#"
+          {
+            "id": "QeSrHN1qZhaKqtapAs0zdg",
+            "rawId": "QeSrHN1qZhaKqtapAs0zdg",
+            "response": {
+              "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NZAAAAAFMRJtbnF0FckyA9mqaYEjkAEEHkqxzdamYWiqrWqQLNM3alAQIDJiABIVgg5sd8KWiun-6PVWnbwNvrhuKbOn0slHf93D7LHRGzm7giWCD-JQqQjzd-GuEt61mjPpXlEJZ0mOmmsPBeZdF0afr0pw",
+              "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoicWZTMTAwRWdZNXYxblgwc2xHX0NkQ1BzdThXUWtNS3lPS2lOQ1FicDN1WSIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+              "transports": null
+            },
+            "type": "public-key",
+            "extensions": { "cred_props": { "rk": true } }
+          }
+          "#;
+
+        let response = PasskeyOutput::RegisterCredential(cred.as_bytes().to_vec());
+        let update = app.resolve(request, response).expect("an update");
+
+        // check that the app emitted a RegisterCredential event
+        let actual = update.events[0].clone();
+        let cred = assert_matches!(actual.clone(), Event::RegisterCredential(cred) => cred);
+        assert_eq!(cred.id, "QeSrHN1qZhaKqtapAs0zdg");
+
+        // push the event into the app
+        let mut update = app.update(actual, &mut model);
+
+        // check that the app emitted an HTTP request,
+        // capturing the request in the process
+        assert_let!(Effect::Http(request), &mut update.effects[0]);
+
+        // check that the request is a POST to the correct URL, with correct headers and body
+        let actual = &request.operation;
+        let expected = &HttpRequest::post(format!("{server_url}/auth/register_finish"))
+            .header("content-type", "application/json")
+            .json(cred)
+            .build();
+        assert_eq!(actual, expected);
+
+        // resolve the request with a simulated response from the web API
+        let response = HttpResponse::ok().build();
+        let update = app.resolve(request, response).expect("an update");
+
+        // check that the app emitted a CredentialRegistered event
+        let actual = update.events[0].clone();
+        assert_matches!(actual, Event::CredentialRegistered(Ok(_)));
+
+        // push the event into the app
+        let update = app.update(actual, &mut model);
+
+        // check that the app asked us to render
+        assert_effect!(update, Effect::Render(_));
+    }
+
+    #[test]
+    fn login() {
+        let app = AppTester::<App, _>::default();
+
+        let server_url = "https://localhost";
+        let mut model = Model {
+            server_url: Some(server_url.to_owned()),
+            ..Default::default()
+        };
+
+        let event = Event::Login(String::from("stu"));
+
+        let mut update = app.update(event, &mut model);
+        assert_effect!(update, Effect::Render(_));
+
+        insta::assert_yaml_snapshot!(app.view(&mut model), @r###"
+        ---
+        status:
+          Info: "logging in \"stu\"..."
+        "###);
+
+        // check that the app emitted an HTTP request,
+        // capturing the request in the process
+        assert_let!(Effect::Http(request), &mut update.effects[2]); // 2 renders before this
+
+        // check that the request is a GET to the correct URL
+        let actual = &request.operation;
+        let expected = &HttpRequest::get(format!("{server_url}/auth/login_start/stu")).build();
+        assert_eq!(actual, expected);
+
+        // resolve the request with a simulated response from the web API
+        let response = HttpResponse::ok()
+            .body(
+                r#"{
+                    "publicKey": {
+                      "challenge": "5DDNuq-9a0bRif8Z35MfRZ6Gu2WfwqK0DSss34u6u4Q",
+                      "timeout": 60000,
+                      "rpId": "localhost",
+                      "allowCredentials": [
+                        {
+                          "type": "public-key",
+                          "id": "QeSrHN1qZhaKqtapAs0zdg"
+                        }
+                      ],
+                      "userVerification": "preferred"
+                    }
+                  }"#,
+            )
+            .build();
+
+        let update = app.resolve(request, response).expect("an update");
+
+        // check that the app emitted a RequestChallenge event,
+        let actual = update.events[0].clone();
+        let rcr = assert_matches!(actual.clone(), Event::RequestChallenge(Ok(mut r)) => r.take_body().unwrap());
+        assert_eq!(
+            rcr.public_key.challenge.to_string(),
+            "5DDNuq-9a0bRif8Z35MfRZ6Gu2WfwqK0DSss34u6u4Q"
+        );
+
+        // push the event into the app
+        let mut update = app.update(actual, &mut model);
+
+        // check that the app emitted a RequestCredential effect,
+        assert_let!(Effect::Passkey(request), &mut update.effects[0]);
+
+        // check that the request is to request a credential
+        let actual = &request.operation;
+        let bytes = serde_json::to_vec(&rcr).unwrap();
+        let expected = &PasskeyOperation::RequestCredential(bytes);
+        assert_eq!(actual, expected);
+
+        let cred = r#"
+        {
+            "id": "QeSrHN1qZhaKqtapAs0zdg",
+            "rawId": "QeSrHN1qZhaKqtapAs0zdg",
+            "response": {
+              "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MZAAAAAA",
+              "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoicUtLczlqTFkzdTJqUjktcFYwaWxCXzRaSFl4X2ZoTWJPb28zRl9TTElPayIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+              "signature": "MEYCIQCPJ-kr6Hx2FlG0hXIhSl9oIhSEpyYJdqAkw5E_9TRzUgIhAK5pdjG5o_YfG4UJMn-EbDyxOXlc8N7mp0_mp5BYUwkS",
+              "userHandle": "gv9EH05-QLK9cw7HQbIUaw"
+            },
+            "extensions": { "appid": null, "hmac_get_secret": null },
+            "type": "public-key"
+          }
+          "#;
+
+        let response = PasskeyOutput::Credential(cred.as_bytes().to_vec());
+        let update = app.resolve(request, response).expect("an update");
+
+        // check that the app emitted a Credential event
+        let actual = update.events[0].clone();
+        let cred = assert_matches!(actual.clone(), Event::Credential(cred) => cred);
+        assert_eq!(cred.id, "QeSrHN1qZhaKqtapAs0zdg");
+
+        // push the event into the app
+        let mut update = app.update(actual, &mut model);
+
+        // check that the app emitted an HTTP request,
+        // capturing the request in the process
+        assert_let!(Effect::Http(request), &mut update.effects[0]);
+
+        // check that the request is a POST to the correct URL, with correct headers and body
+        let actual = &request.operation;
+        let expected = &HttpRequest::post(format!("{server_url}/auth/login_finish"))
+            .header("content-type", "application/json")
+            .json(cred)
+            .build();
+        assert_eq!(actual, expected);
+
+        // resolve the request with a simulated response from the web API
+        let response = HttpResponse::ok().build();
+        let update = app.resolve(request, response).expect("an update");
+
+        // check that the app emitted a CredentialVerified event
+        let actual = update.events[0].clone();
+        assert_matches!(actual, Event::CredentialVerified(Ok(_)));
+
+        // push the event into the app
+        let update = app.update(actual, &mut model);
+
+        // check that the app asked us to render
+        assert_effect!(update, Effect::Render(_));
     }
 
     #[test]
@@ -379,7 +539,7 @@ mod tests {
 
         let mut model = Model::default();
 
-        let event = Event::Register("".to_string());
+        let event = Event::Register(String::new());
 
         let update = app.update(event, &mut model);
         assert_effect!(update, Effect::Render(_));
@@ -397,7 +557,7 @@ mod tests {
 
         let mut model = Model::default();
 
-        let event = Event::Login("".to_string());
+        let event = Event::Login(String::new());
 
         let update = app.update(event, &mut model);
         assert_effect!(update, Effect::Render(_));

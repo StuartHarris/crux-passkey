@@ -35,7 +35,7 @@ pub(crate) fn get_user_unique_id(connection: &Connection, username: &str) -> Res
     Ok(connection
         .execute(
             "SELECT user_id FROM user WHERE user_name = ?1",
-            &[Value::Text(username.to_string())],
+            &[Value::Text(username.to_owned())],
         )?
         .rows()
         .next()
@@ -66,7 +66,7 @@ pub(crate) fn save_user(
     Ok(connection.execute(
         "INSERT INTO user (user_name, user_id) VALUES (?1, ?2)",
         &[
-            Value::Text(username.to_string()),
+            Value::Text(username.to_owned()),
             Value::Blob(user_unique_id.as_bytes().to_vec()),
         ],
     )?)

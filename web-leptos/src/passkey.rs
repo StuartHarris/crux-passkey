@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use leptos::*;
-use log::info;
 use shared::passkey::{PasskeyOperation, PasskeyOutput};
 use wasm_bindgen::UnwrapThrowExt;
 use wasm_bindgen_futures::JsFuture;
@@ -16,7 +15,6 @@ pub async fn request(operation: &PasskeyOperation) -> Result<PasskeyOutput> {
             // First, convert from our webauthn proto json safe format, into the browser
             // compatible struct, with everything decoded as needed.
             let c_options: web_sys::CredentialCreationOptions = ccr.into();
-            info!("c_options: {:?}", c_options);
 
             // Create a promise that calls the browsers navigator.credentials.create api.
             let promise = window()
@@ -41,7 +39,6 @@ pub async fn request(operation: &PasskeyOperation) -> Result<PasskeyOutput> {
             // First, convert from our webauthn proto json safe format, into the browser
             // compatible struct, with everything decoded as needed.
             let c_options: web_sys::CredentialRequestOptions = ccr.into();
-            info!("c_options: {:?}", c_options);
 
             // Create a promise that calls the browsers navigator.credentials.create api.
             let promise = window()
