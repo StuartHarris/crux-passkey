@@ -6,7 +6,7 @@ use leptos::{
     component, create_effect, create_node_ref, create_signal, ev::SubmitEvent, event_target_value,
     html::Input, view, window, IntoView, NodeRef, SignalGet, SignalUpdate,
 };
-use shared::Event;
+use shared::{Event, Status};
 
 #[component]
 fn RootComponent() -> impl IntoView {
@@ -40,13 +40,13 @@ fn RootComponent() -> impl IntoView {
     };
 
     let notification = move || match view.get().status {
-        shared::Status::None => {
+        Status::None => {
             view! {<div />}
         }
-        shared::Status::Info(msg) => {
+        Status::Info(msg) => {
             view! {<div class="notification is-info is-light">{msg}</div>}
         }
-        shared::Status::Error(msg) => {
+        Status::Error(msg) => {
             view! {<div class="notification is-warning is-light">{msg}</div>}
         }
     };

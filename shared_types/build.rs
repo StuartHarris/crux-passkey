@@ -7,8 +7,8 @@ fn main() {
 
     let mut gen = TypeGen::new();
 
-    gen.register_app::<App>().expect("register");
     gen.register_type::<Status>().expect("register");
+    gen.register_app::<App>().expect("register");
 
     let output_root = PathBuf::from("./generated");
 

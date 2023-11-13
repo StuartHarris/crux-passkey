@@ -1,4 +1,3 @@
-use crate::{capabilities::passkey::Passkey, passkey};
 use crux_core::render::Render;
 use crux_http::Http;
 use crux_macros::Effect;
@@ -9,10 +8,7 @@ use webauthn_rs_proto::{
     RequestChallengeResponse,
 };
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Config {
-    pub server_url: String,
-}
+use crate::passkey::{self, Passkey};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Event {
@@ -59,7 +55,7 @@ pub enum Status {
 pub struct Model {
     server_url: Option<String>,
     user_name: String,
-    status: Status,
+    pub status: Status,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -70,9 +66,9 @@ pub struct ViewModel {
 #[cfg_attr(feature = "typegen", derive(crux_macros::Export))]
 #[derive(Effect)]
 pub struct Capabilities {
-    http: Http<Event>,
-    passkey: Passkey<Event>,
-    render: Render<Event>,
+    pub http: Http<Event>,
+    pub passkey: Passkey<Event>,
+    pub render: Render<Event>,
 }
 
 #[derive(Default)]
