@@ -101,13 +101,15 @@ Start the local spin server:
 ./run.sh
 ```
 
-And open your browser at https://localhost
+And then open your browser at https://localhost
 
-Or publish to Fermyon Cloud:
+Or publish to Fermyon Cloud (you'll need to have a Fermyon account and have
+installed the Fermyon CLI):
 
 ```bash
+./cloud_create_db.sh # Only need to do this once
 ./deploy.sh
 ```
 
-And open your browser at https://crux-passkey-server-8sdh7f6w.fermyon.app (or
-whatever your domain is)
+And then open your browser at https://crux-passkey-server-8sdh7f6w.fermyon.app
+(or whatever your domain is)
