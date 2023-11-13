@@ -9,8 +9,8 @@ source .env
 # for how to generate certs that are issued by a local CA.
 # you'll need to add the CA to your browser's trust store (or trust them in keychain on macos)
 # (spin 2.0 crashes on use of self-signed certs)
-key="localhost_key.pem"
-cert="localhost_cert.pem"
+key="certs/key.pem"
+cert="certs/cert.pem"
 
 export OPENSSL_STATIC=1
 export OPENSSL_DIR

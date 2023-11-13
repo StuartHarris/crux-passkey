@@ -67,8 +67,47 @@ after the request has been processed.
 
 To support passkeys, we need a service backend that exposes the
 [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn) protocol. I had to jump
-through a few hoops. And of course we're on the bleeding edge here — when you're
-down a rabbit hole, you have to climb back out of it yourself.
+through a few hoops, like vendoring a Wasm-compatible version of OpenSSL — we're
+on the bleeding edge here :-)
 
-The server-side component is written in Rust, compiled to WebAssembly (Wasm),
-and can be deployed, as is, to [Fermyon Cloud](https://www.fermyon.com/cloud).
+The server-side component is written in Rust, compiled to WebAssembly, and can
+be deployed, as is, to [Fermyon Cloud](https://www.fermyon.com/cloud).
+
+# Getting started
+
+Change to the `crux-passkey-server` directory:
+
+```bash
+cd crux-passkey-server
+```
+
+Create a `.env` file with the following contents:
+
+```bash
+export SPIN_VARIABLE_DOMAIN_LOCAL=localhost
+export SPIN_VARIABLE_DOMAIN_REMOTE=crux-passkey-server-8sdh7f6w.fermyon.app # Change this to your own domain
+```
+
+Create an SSL cert (preferably issued by a trusted CA) and key and place them in
+the `certs` directory. The filenames should be `cert.pem` and `key.pem`. You can
+follow the instructions
+[here](https://www.section.io/engineering-education/how-to-get-ssl-https-for-localhost/)
+(you may need to add the CA to your browser's trust store — or trust them in
+KeyChain on MacOS — spin 2.0 crashes on use of self-signed certs)
+
+Start the local spin server:
+
+```bash
+./run.sh
+```
+
+And open your browser at https://localhost
+
+Or publish to Fermyon Cloud:
+
+```bash
+./deploy.sh
+```
+
+And open your browser at https://crux-passkey-server-8sdh7f6w.fermyon.app (or
+whatever your domain is)
