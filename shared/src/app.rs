@@ -309,43 +309,7 @@ mod tests {
 
         // resolve the request with a simulated response from the web API
         let response = HttpResponse::ok()
-            .body(
-                r#"{
-                "publicKey": {
-                    "rp": {
-                        "name": "Crux Passkey",
-                        "id": "crux-passkey-server-9uqexpm2.fermyon.app"
-                    },
-                    "user": {
-                        "id": "brs4tqNATYib4pRlF74jSg",
-                        "name": "stu",
-                        "displayName": "stu"
-                    },
-                    "challenge": "LnWGR_0kcTrx_qqFPQEZzfsogvic6bSLfXnihBzUYAg",
-                    "pubKeyCredParams": [
-                        {
-                            "type": "public-key",
-                            "alg": -7
-                        },
-                        {
-                            "type": "public-key",
-                            "alg": -257
-                        }
-                    ],
-                    "timeout": 60000,
-                    "attestation": "none",
-                    "excludeCredentials": [],
-                    "authenticatorSelection": {
-                        "requireResidentKey": false,
-                        "userVerification": "preferred"
-                    },
-                    "extensions": {
-                        "uvm": true,
-                        "credProps": true
-                    }
-                }
-            }"#,
-            )
+            .body(include_str!("./fixtures/creation_options.json"))
             .build();
 
         let update = app.resolve(request, response).expect("an update");
@@ -370,19 +334,7 @@ mod tests {
         let expected = &PasskeyOperation::CreateCredential(bytes);
         assert_eq!(actual, expected);
 
-        let cred = r#"
-          {
-            "id": "QeSrHN1qZhaKqtapAs0zdg",
-            "rawId": "QeSrHN1qZhaKqtapAs0zdg",
-            "response": {
-              "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NZAAAAAFMRJtbnF0FckyA9mqaYEjkAEEHkqxzdamYWiqrWqQLNM3alAQIDJiABIVgg5sd8KWiun-6PVWnbwNvrhuKbOn0slHf93D7LHRGzm7giWCD-JQqQjzd-GuEt61mjPpXlEJZ0mOmmsPBeZdF0afr0pw",
-              "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoicWZTMTAwRWdZNXYxblgwc2xHX0NkQ1BzdThXUWtNS3lPS2lOQ1FicDN1WSIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
-              "transports": null
-            },
-            "type": "public-key",
-            "extensions": { "cred_props": { "rk": true } }
-          }
-          "#;
+        let cred = include_str!("./fixtures/register_credential.json");
 
         let response = PasskeyOutput::RegisterCredential(cred.as_bytes().to_vec());
         let update = app.resolve(request, response).expect("an update");
@@ -455,22 +407,7 @@ mod tests {
 
         // resolve the request with a simulated response from the web API
         let response = HttpResponse::ok()
-            .body(
-                r#"{
-                    "publicKey": {
-                      "challenge": "5DDNuq-9a0bRif8Z35MfRZ6Gu2WfwqK0DSss34u6u4Q",
-                      "timeout": 60000,
-                      "rpId": "localhost",
-                      "allowCredentials": [
-                        {
-                          "type": "public-key",
-                          "id": "QeSrHN1qZhaKqtapAs0zdg"
-                        }
-                      ],
-                      "userVerification": "preferred"
-                    }
-                  }"#,
-            )
+            .body(include_str!("./fixtures/request_options.json"))
             .build();
 
         let update = app.resolve(request, response).expect("an update");
@@ -495,20 +432,7 @@ mod tests {
         let expected = &PasskeyOperation::RequestCredential(bytes);
         assert_eq!(actual, expected);
 
-        let cred = r#"
-        {
-            "id": "QeSrHN1qZhaKqtapAs0zdg",
-            "rawId": "QeSrHN1qZhaKqtapAs0zdg",
-            "response": {
-              "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MZAAAAAA",
-              "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoicUtLczlqTFkzdTJqUjktcFYwaWxCXzRaSFl4X2ZoTWJPb28zRl9TTElPayIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
-              "signature": "MEYCIQCPJ-kr6Hx2FlG0hXIhSl9oIhSEpyYJdqAkw5E_9TRzUgIhAK5pdjG5o_YfG4UJMn-EbDyxOXlc8N7mp0_mp5BYUwkS",
-              "userHandle": "gv9EH05-QLK9cw7HQbIUaw"
-            },
-            "extensions": { "appid": null, "hmac_get_secret": null },
-            "type": "public-key"
-          }
-          "#;
+        let cred = include_str!("./fixtures/credential.json");
 
         let response = PasskeyOutput::Credential(cred.as_bytes().to_vec());
         let update = app.resolve(request, response).expect("an update");

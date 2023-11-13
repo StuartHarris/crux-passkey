@@ -1,0 +1,35 @@
+{
+  "publicKey": {
+    "rp": {
+      "name": "Crux Passkey",
+      "id": "crux-passkey-server-9uqexpm2.fermyon.app"
+    },
+    "user": {
+      "id": "brs4tqNATYib4pRlF74jSg",
+      "name": "stu",
+      "displayName": "stu"
+    },
+    "challenge": "LnWGR_0kcTrx_qqFPQEZzfsogvic6bSLfXnihBzUYAg",
+    "pubKeyCredParams": [
+      {
+        "type": "public-key",
+        "alg": -7
+      },
+      {
+        "type": "public-key",
+        "alg": -257
+      }
+    ],
+    "timeout": 60000,
+    "attestation": "none",
+    "excludeCredentials": [],
+    "authenticatorSelection": {
+      "requireResidentKey": false,
+      "userVerification": "preferred"
+    },
+    "extensions": {
+      "uvm": true,
+      "credProps": true
+    }
+  }
+}
