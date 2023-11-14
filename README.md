@@ -124,3 +124,88 @@ installed the Fermyon CLI):
 
 And then open your browser at https://crux-passkey-server-8sdh7f6w.fermyon.app
 (or whatever your domain is)
+
+# How does it work?
+
+![registration](./docs/registration.png)
+
+The diagram above shows the registration process.
+
+1.  The user enters their email address and clicks "Register" (web), or "Sign
+    Up" (iOS app).
+
+2.  The `auth` App, via the `GetCreationChallenge` event and the `crux_http`
+    Capability, sends a `POST` request to the backend.
+
+3.  The backend responds with a `PublicKeyCredentialCreationOptions` object, via
+    the `CreationChallenge` event.
+
+4.  For the iOS app, this is passed, via the `passkey` Capability, to the
+    iOS-shell side of the `passkey` Capability implementation, which uses an
+    [`ASAuthorizationController`](https://developer.apple.com/documentation/authenticationservices/asauthorizationcontroller)
+    to prompt the user to create a passkey.
+
+    For the web Shell, this is passed, via the `passkey` Capability, to the
+    browser's
+    [`navigator.credentials.create`](https://developer.mozilla.org/en-US/docs/Web/API/CredentialsContainer/create)
+    method by the web-shell side of the `passkey` Capability implementation,
+    which prompts the user to create a passkey.
+
+5.  The user creates a passkey and the `passkey` Capability returns a
+    `RegisterPublicKeyCredential` object, via the `RegisterCredential` event,
+    which contains the public key, the signed challenge, and other information.
+
+6.  The `RequestCredential` event is handled by the app, sending a `POST`
+    request, via the `crux_http` Capability, to the backend with the
+    `RegisterPublicKeyCredential` object.
+
+7.  The backend verifies the information and registers the user by storing the
+    user's public key in it's database, responding with a `201 Created` status
+    code.
+
+8.  The `CredentialRegistered` event is handled by the app, which updates its
+    state to indicate that the user is registered.
+
+![login](./docs/logging_in.png)
+
+1. The user enters their email address and clicks "Login" (web), or "Sign In"
+   (iOS app).
+
+2. The `auth` App, via the `GetRequestChallenge` event and the `crux_http`
+   Capability, sends a `POST` request to the backend.
+
+3. The backend responds with a `PublicKeyCredentialRequestOptions` object, via
+   the `RequestChallenge` event.
+
+4. For the iOS app, this is passed, via the `passkey` Capability, to the
+   iOS-shell side of the `passkey` Capability implementation, which uses an
+   [`ASAuthorizationController`](https://developer.apple.com/documentation/authenticationservices/asauthorizationcontroller)
+   to prompt the user to login with their passkey.
+
+   For the web Shell, this is passed, via the `passkey` Capability, to the
+   browser's
+   [`navigator.credentials.get`](https://developer.mozilla.org/en-US/docs/Web/API/CredentialsContainer/get)
+   method by the web-shell side of the `passkey` Capability implementation,
+   which prompts the user to login with their passkey.
+
+5. The user enters their passkey and the `passkey` Capability returns a
+   `PublicKeyCredential` object, via the `Credential` event, which contains the
+   signed challenge, and other information.
+
+6. The `RequestCredential` event is handled by the app, sending a `POST`
+   request, via the `crux_http` Capability, to the backend with the
+   `PublicKeyCredential` object.
+
+7. The backend verifies the information and responds with a `200 OK` status
+   code.
+
+8. The `CredentialVerified` event is handled by the app, which updates its state
+   to indicate that the user is logged in.
+
+The `shared` directory contains the core of the implementation. It's an example
+of a root Crux App that nests an
+[`auth` Crux App](./shared/src/app/auth/mod.rs). The `auth` App orchestrates the
+[`crux_http`](https://crates.io/crates/crux_http) and
+[`passkey`](./shared/src/capabilities/passkey.rs) Capabilities to provide
+passkey registration and login functionality against
+[the backend](./crux-passkey-server/webauthn/src/lib.rs).

@@ -91,7 +91,7 @@ pub(crate) fn register_finish(req: Request, _params: Params) -> Result<impl Into
             db::save_user(&connection, &username, &user_unique_id)?;
             db::save_credentials(&connection, &user_unique_id, &passkey)?;
             println!("Registration Successful!");
-            Ok(Response::builder().status(200).build())
+            Ok(Response::new(201, "Created"))
         }
         Err(e) => {
             println!("register_finish: {:?}", e);
@@ -157,7 +157,7 @@ pub(crate) fn login_finish(req: Request, _params: Params) -> Result<impl IntoRes
                 db::save_credentials(&connection, &user_unique_id, &cred)?;
             }
             println!("Login Successful!");
-            Ok(Response::builder().status(200).build())
+            Ok(Response::new(200, "OK"))
         }
         Err(e) => {
             println!("login_finish: {:?}", e);
