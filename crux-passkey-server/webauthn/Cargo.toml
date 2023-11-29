@@ -13,7 +13,7 @@ anyhow = "1.0.75"
 cookie = { version = "0.18.0", features = ["percent-encode", "secure"] }
 serde_json = "1.0.108"
 spin-sdk = { git = "https://github.com/fermyon/spin" }
-uuid = { version = "1.5.0", features = ["v4"] }
+uuid = { version = "1.6.1", features = ["v4"] }
 webauthn-rs = { version = "0.4.8", features = [
   "danger-allow-state-serialisation"
 ] }

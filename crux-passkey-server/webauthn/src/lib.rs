@@ -15,6 +15,6 @@ fn handle_request(req: Request) -> Result<impl IntoResponse> {
     router.post("/auth/register_finish", auth::register_finish);
     router.get("/auth/login_start/:username", auth::login_start);
     router.post("/auth/login_finish", auth::login_finish);
-    router.any("/*", |_: Request, _| Response::new(400, "Not found"));
+    router.any("/*", |_: Request, _| Response::new(404, "Not found"));
     Ok(router.handle(req))
 }

@@ -10,8 +10,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 anyhow = "1"
-http = "0.2"
+http = "1.0"
 include_dir = "0.7.3"
-spin-sdk = { git = "https://github.com/fermyon/spin", tag = "v1.5.1" }
+spin-sdk = { git = "https://github.com/fermyon/spin" }
 
 [workspace]
