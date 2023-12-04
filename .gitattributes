@@ -1,1 +1,2 @@
 crux-passkey-server/webauthn/openssl_wasm/** linguist-vendored
+generated/** linguist-generated
